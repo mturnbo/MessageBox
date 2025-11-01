@@ -1,20 +1,21 @@
-from fastapi import APIRouter, Depends, HTTPException
-from models.user import User, UserResponse
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import List
+from sqlmodel import Session, select
+from app.dbmodels import User
+from app.database import get_session
 
-router = APIRouter()
+router = APIRouter(prefix="/users", tags=["users"])
 
-@router.get("/users", response_model=List[UserResponse])
-def get_all_users(db: Session = Depends(get_db)):
-    """Get all users from the database"""
-    users = db.query(User).all()
+@router.get("/", response_model=List[User])
+def read_users(session: Session = Depends(get_session), offset: int = 0, limit: int = Query(default=100, le=100)):
+    users = session.exec(select(User).offset(offset).limit(limit)).all()
     return users
 
-@router.get("/users/{user_id}", response_model=UserResponse)
-def get_user_by_id(user_id: int, db: Session = Depends(get_db)):
-    """Get a single user by ID"""
-    user = db.query(User).filter(User.id == user_id).first()
-    if user is None:
+
+@router.get("/{user_id}", response_model=User)
+def read_user(user_id: int, session: Session = Depends(get_session)):
+    user = session.get(User, user_id)
+    if not user:
         raise HTTPException(status_code=404, detail="User not found")
+
     return user
