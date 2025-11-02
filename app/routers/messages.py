@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 from typing import List
 from sqlmodel import Session, select
-from app.dbmodels import Message
+from app.models.dbmodels import Message
 from app.database import get_session
 
 router = APIRouter(prefix="/messages", tags=["messages"])

@@ -3,11 +3,6 @@
 import datetime
 from sqlmodel import SQLModel, Field, Column
 from datetime import datetime, timezone
-from pydantic import BaseModel
-
-class Token(BaseModel):
-    username: str
-    token: str
 
 class User(SQLModel, table=True):
     __tablename__ = "users"
