@@ -70,9 +70,7 @@ def create_user(
         created_at=datetime.utcnow().isoformat()
     )
 
-    print(new_user)
-
-    # session.add(user)
-    # session.commit()
-    # session.refresh(user)
+    session.add(new_user)
+    session.commit()
+    session.refresh(new_user)
     return new_user
