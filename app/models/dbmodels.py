@@ -4,19 +4,23 @@ import datetime
 from sqlmodel import SQLModel, Field, Column
 from datetime import datetime, timezone
 
-class User(SQLModel, table=True):
-    __tablename__ = "users"
-    id: int = Field(primary_key=True)
+class UserBase(SQLModel):
     username: str
     email: str
-    password_hash: str
     first_name: str
     last_name: str
     device_address: str | None
+
+class User(UserBase, table=True):
+    __tablename__ = "users"
+    id: int = Field(primary_key=True)
+    password_hash: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     last_seen: datetime = Field(default_factory=lambda: datetime.now(timezone.utc),
                                  sa_column_kwargs={"onupdate": lambda: datetime.now(timezone.utc)})
 
+class UserPublic(UserBase):
+    id: int
 
 class Message(SQLModel, table=True):
     __tablename__ = "messages"
@@ -31,3 +35,4 @@ class Message(SQLModel, table=True):
     reader_address: str | None = None
     is_deleted_by_sender: bool = False
     is_deleted_by_recipient: bool = False
+
