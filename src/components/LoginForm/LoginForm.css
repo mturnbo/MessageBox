@@ -1,4 +1,5 @@
 .loginform {
+    width: 300px;
     background-color: #535bf2;
     padding: 10px;
     border-radius: 10px;
@@ -20,4 +21,5 @@
     font-weight: bold;
     font-size: 8px;
     max-width: 300px;
+    overflow: wrap;
 }
