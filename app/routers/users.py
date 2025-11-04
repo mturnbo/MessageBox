@@ -46,7 +46,7 @@ def get_user(
 
     return user
 
-@router.post("/newuser", response_model=User)
+@router.post("/register", response_model=User)
 def create_user(
     user_data: NewUser,
     session: Session = Depends(get_session),
