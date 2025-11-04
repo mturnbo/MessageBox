@@ -1,0 +1,23 @@
+.loginform {
+    background-color: #535bf2;
+    padding: 10px;
+    border-radius: 10px;
+}
+
+.loginform input {
+    margin-bottom: 10px;
+    border: 1px solid #FFFFFF;
+}
+
+.loginform button {
+    color: #FFFFFF;
+    font-weight: bold;
+    align: right;
+}
+
+.loginform tokenstr {
+    color: #FFFFFF;
+    font-weight: bold;
+    font-size: 8px;
+    max-width: 300px;
+}
