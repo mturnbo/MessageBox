@@ -3,7 +3,7 @@ import { API_BASE_URL } from '../../config.js';
 import { useAuth } from '../../AuthContext.jsx';
 import './LoginForm.css';
 
-function LoginForm() {
+const LoginForm = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
