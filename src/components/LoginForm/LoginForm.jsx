@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { API_BASE_URL } from '../../config.js';
+import { useAuth } from '../../AuthContext.jsx';
 import './LoginForm.css';
 
-function LoginForm() {
+const LoginForm = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const { token, handleLoginSuccess, logout } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -27,10 +29,10 @@ function LoginForm() {
       }
 
       const data = await response.json();
-      // Assuming your API returns the token in a 'token' field
       if (data.token) {
-        setToken(data.token);
-        sessionStorage.setItem('accessToken', data.token);
+        handleLoginSuccess(data.token);
+        // setToken(data.token);
+        // sessionStorage.setItem('authToken', data.token);
       } else {
         throw new Error('No token received');
       }
