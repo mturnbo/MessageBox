@@ -1,0 +1,71 @@
+.mb-header {
+  border-radius: 0 !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-top: none !important;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+
+  &__brand {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  &__logo {
+    font-size: 1.5rem;
+    color: var(--p-primary-500);
+  }
+
+  &__title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--p-primary-700);
+    letter-spacing: -0.025em;
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  &__nav-btn {
+    text-decoration: none;
+    border-radius: 8px;
+    transition: background-color 0.15s ease;
+
+    .mb-header__nav-btn-inner {
+      color: var(--p-text-muted-color) !important;
+    }
+
+    &--active {
+      background-color: var(--p-primary-50);
+
+      .mb-header__nav-btn-inner {
+        color: var(--p-primary-600) !important;
+        font-weight: 600;
+      }
+    }
+  }
+
+  &__divider {
+    width: 1px;
+    height: 1.5rem;
+    background: var(--p-content-border-color);
+    margin: 0 0.5rem;
+  }
+
+  &__avatar-wrap {
+    position: relative;
+    cursor: pointer;
+    margin-left: 0.25rem;
+  }
+
+  &__avatar {
+    background: var(--p-primary-500) !important;
+    color: #fff !important;
+    font-weight: 600;
+  }
+}
