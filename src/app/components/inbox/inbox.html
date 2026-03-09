@@ -1,0 +1,103 @@
+<p-toast></p-toast>
+
+<div class="mb-inbox">
+  <div class="mb-inbox__header">
+    <h1 class="mb-inbox__title">
+      <i class="pi pi-inbox"></i>
+      Inbox
+    </h1>
+    <p-tag
+      [value]="totalRecords() + ' messages'"
+      severity="secondary"
+      styleClass="mb-inbox__count">
+    </p-tag>
+  </div>
+
+  <p-card styleClass="mb-inbox__card">
+    @if (loading()) {
+      <div class="mb-inbox__skeleton">
+        @for (i of [1,2,3,4,5]; track i) {
+          <div class="mb-inbox__skeleton-row">
+            <p-skeleton width="2rem" height="2rem" borderRadius="50%"></p-skeleton>
+            <div class="mb-inbox__skeleton-content">
+              <p-skeleton width="30%" height="0.875rem"></p-skeleton>
+              <p-skeleton width="60%" height="0.875rem"></p-skeleton>
+              <p-skeleton width="80%" height="0.75rem"></p-skeleton>
+            </div>
+            <p-skeleton width="5rem" height="0.75rem"></p-skeleton>
+          </div>
+          <p-divider></p-divider>
+        }
+      </div>
+    } @else if (messages().length === 0) {
+      <div class="mb-inbox__empty">
+        <i class="pi pi-inbox mb-inbox__empty-icon"></i>
+        <p>Your inbox is empty</p>
+      </div>
+    } @else {
+      <ul class="mb-inbox__list">
+        @for (message of messages(); track message.id) {
+          <li
+            class="mb-inbox__item"
+            [class.mb-inbox__item--unread]="isUnread(message)"
+            (click)="openMessage(message)"
+            role="button"
+            tabindex="0"
+            (keydown.enter)="openMessage(message)">
+
+            <div class="mb-inbox__item-avatar">
+              <div class="mb-inbox__avatar-circle">
+                {{ message.senderName?.charAt(0)?.toUpperCase() ?? '?' }}
+              </div>
+              @if (isUnread(message)) {
+                <span class="mb-inbox__unread-dot"></span>
+              }
+            </div>
+
+            <div class="mb-inbox__item-content">
+              <div class="mb-inbox__item-meta">
+                <span class="mb-inbox__sender">
+                  <span class="mb-inbox__label">From:</span>
+                  {{ message.senderName }}
+                </span>
+                <span class="mb-inbox__date">{{ message.sentAt | date: 'MMM d, y, h:mm a' }}</span>
+              </div>
+              <div class="mb-inbox__subject">{{ message.subject || '(no subject)' }}</div>
+              <div class="mb-inbox__preview">{{ message.body }}</div>
+            </div>
+
+            <div class="mb-inbox__item-actions">
+              <p-button
+                icon="pi pi-archive"
+                [text]="true"
+                [rounded]="true"
+                severity="secondary"
+                size="small"
+                pTooltip="Archive"
+                tooltipPosition="left"
+                (onClick)="archiveMessage(message, $event)"
+                styleClass="mb-inbox__archive-btn">
+              </p-button>
+            </div>
+          </li>
+        }
+      </ul>
+
+      @if (totalRecords() > pageSize) {
+        <p-paginator
+          [rows]="pageSize"
+          [totalRecords]="totalRecords()"
+          [first]="(page() - 1) * pageSize"
+          (onPageChange)="onPageChange($event)"
+          styleClass="mb-inbox__paginator">
+        </p-paginator>
+      }
+    }
+  </p-card>
+</div>
+
+<app-message-view-modal
+  [visible]="showMessageView()"
+  [message]="selectedMessage()"
+  (close)="onMessageViewClose()">
+</app-message-view-modal>
