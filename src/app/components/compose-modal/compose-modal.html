@@ -1,0 +1,92 @@
+<p-toast></p-toast>
+
+<p-dialog
+  [(visible)]="visible"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  (onHide)="onClose()"
+  styleClass="mb-compose-dialog"
+  [style]="{ width: '580px', maxWidth: '95vw' }">
+
+  <ng-template #header>
+    <div class="mb-compose-dialog__header">
+      <i class="pi pi-pencil mb-compose-dialog__icon"></i>
+      <h3 class="mb-compose-dialog__title">New Message</h3>
+    </div>
+  </ng-template>
+
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="mb-compose-form">
+    @if (errorMessage) {
+      <p-message severity="error" [text]="errorMessage" styleClass="w-full mb-3"></p-message>
+    }
+
+    <div class="mb-compose-form__field">
+      <label class="mb-compose-form__label" for="recipient">To</label>
+      <p-autocomplete
+        inputId="recipient"
+        formControlName="recipient"
+        [suggestions]="filteredUsers"
+        (completeMethod)="searchUsers($event)"
+        optionLabel="username"
+        placeholder="Search by name or username…"
+        [dropdown]="true"
+        styleClass="w-full"
+        appendTo="body">
+
+        <ng-template #item let-user>
+          <div class="mb-compose-form__user-option">
+            <div class="mb-compose-form__user-avatar">
+              {{ user.username.charAt(0).toUpperCase() }}
+            </div>
+            <div>
+              <div class="mb-compose-form__user-name">{{ getUserLabel(user) }}</div>
+              <div class="mb-compose-form__user-email">{{ user.email }}</div>
+            </div>
+          </div>
+        </ng-template>
+      </p-autocomplete>
+    </div>
+
+    <div class="mb-compose-form__field">
+      <label class="mb-compose-form__label" for="subject">Subject</label>
+      <input
+        pInputText
+        id="subject"
+        formControlName="subject"
+        placeholder="(optional)"
+        class="w-full" />
+    </div>
+
+    <div class="mb-compose-form__field mb-compose-form__field--body">
+      <label class="mb-compose-form__label" for="body">Message</label>
+      <textarea
+        pTextarea
+        id="body"
+        formControlName="body"
+        rows="8"
+        placeholder="Write your message…"
+        class="w-full"
+        [autoResize]="false">
+      </textarea>
+    </div>
+  </form>
+
+  <ng-template #footer>
+    <p-button
+      label="Cancel"
+      icon="pi pi-times"
+      severity="secondary"
+      [outlined]="true"
+      (onClick)="onClose()"
+      styleClass="mr-2">
+    </p-button>
+    <p-button
+      label="Send"
+      icon="pi pi-send"
+      [loading]="loading"
+      [disabled]="form.invalid"
+      (onClick)="onSubmit()">
+    </p-button>
+  </ng-template>
+</p-dialog>

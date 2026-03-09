@@ -1,0 +1,75 @@
+.mb-compose-dialog {
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  &__icon {
+    font-size: 1.25rem;
+    color: var(--p-primary-500);
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--p-text-color);
+  }
+}
+
+.mb-compose-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+
+  &__field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+
+    &--body {
+      flex: 1;
+    }
+  }
+
+  &__label {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--p-text-muted-color);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  &__user-option {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.25rem 0;
+  }
+
+  &__user-avatar {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    background: var(--p-primary-500);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.875rem;
+    flex-shrink: 0;
+  }
+
+  &__user-name {
+    font-size: 0.9375rem;
+    color: var(--p-text-color);
+    font-weight: 500;
+  }
+
+  &__user-email {
+    font-size: 0.75rem;
+    color: var(--p-text-muted-color);
+  }
+}
