@@ -6,7 +6,7 @@
   },
   "newProjectRoot": "projects",
   "projects": {
-    "frontend-angular": {
+    "message-box": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
@@ -61,10 +61,10 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "frontend-angular:build:production"
+              "buildTarget": "message-box:build:production"
             },
             "development": {
-              "buildTarget": "frontend-angular:build:development"
+              "buildTarget": "message-box:build:development"
             }
           },
           "defaultConfiguration": "development"
