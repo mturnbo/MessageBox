@@ -10,7 +10,17 @@
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
-          "style": "scss"
+          "style": "scss",
+          "skipTests": false
+        },
+        "@schematics/angular:service": {
+          "skipTests": false
+        },
+        "@schematics/angular:guard": {
+          "skipTests": false
+        },
+        "@schematics/angular:interceptor": {
+          "skipTests": false
         }
       },
       "root": "",
