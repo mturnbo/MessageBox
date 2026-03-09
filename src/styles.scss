@@ -1,1 +1,55 @@
-/* You can add global styles to this file, and also import other style files */
+/* PrimeNG + PrimeIcons */
+@import "primeicons/primeicons.css";
+@import "primeflex/primeflex.css";
+
+/* ─── Root / reset ─────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── Sky palette custom properties ────────────────────── */
+:root {
+  --mb-sky-50:  #f0f9ff;
+  --mb-sky-100: #e0f2fe;
+  --mb-sky-200: #bae6fd;
+  --mb-sky-300: #7dd3fc;
+  --mb-sky-400: #38bdf8;
+  --mb-sky-500: #0ea5e9;
+  --mb-sky-600: #0284c7;
+  --mb-sky-700: #0369a1;
+  --mb-sky-800: #075985;
+  --mb-sky-900: #0c4a6e;
+  --mb-sky-950: #082f49;
+
+  --mb-page-bg: var(--mb-sky-50);
+}
+
+body {
+  background-color: var(--mb-page-bg);
+  color: var(--p-text-color, #1e293b);
+}
+
+/* ─── Typography helpers ────────────────────────────────── */
+h1, h2, h3, h4, h5, h6 {
+  margin: 0;
+  line-height: 1.3;
+}
+
+/* ─── PrimeNG dialog backdrop ───────────────────────────── */
+.p-dialog-mask {
+  backdrop-filter: blur(4px);
+}
+
+/* ─── Utility ───────────────────────────────────────────── */
+.w-full { width: 100% !important; }
+.mb-3  { margin-bottom: 0.75rem !important; }
+.mr-2  { margin-right: 0.5rem !important; }
