@@ -6,6 +6,7 @@ import { provideAnimationsAsync } from '@angular/platform-browser/animations/asy
 import { vi } from 'vitest';
 import { App } from './app';
 import { AuthService } from './core/services/auth.service';
+import { NotificationService } from './core/services/notification.service';
 import { Router } from '@angular/router';
 
 describe('App (shell)', () => {
@@ -71,5 +72,45 @@ describe('App (shell)', () => {
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelector('app-login-modal')).toBeTruthy();
+  });
+
+  describe('notification polling integration', () => {
+    it('should call stopPolling when the user logs out', () => {
+      localStorage.setItem('mb_user', JSON.stringify({ username: 'alice', token: 'tok' }));
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [App],
+        providers: [
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          provideRouter([]),
+          provideAnimationsAsync(),
+        ],
+      });
+
+      const notificationService = TestBed.inject(NotificationService);
+      const authService = TestBed.inject(AuthService);
+      const stopPollingSpy = vi.spyOn(notificationService, 'stopPolling');
+
+      const fixture = TestBed.createComponent(App);
+      fixture.detectChanges();
+
+      authService.logout();
+      fixture.detectChanges(); // effect re-evaluates after signal change
+
+      expect(stopPollingSpy).toHaveBeenCalled();
+    });
+
+    it('should expose newMessage$ subject on NotificationService', () => {
+      const notificationService = TestBed.inject(NotificationService);
+      // Verify the subject is observable so the app.ts subscription can receive events
+      let received = false;
+      notificationService.newMessage$.subscribe(() => { received = true; });
+      notificationService.notifyNewMessage(
+        { id: 1, senderId: 2, recipientId: 3, sentAt: new Date().toISOString() },
+        'Bob Jones',
+      );
+      expect(received).toBe(true);
+    });
   });
 });
