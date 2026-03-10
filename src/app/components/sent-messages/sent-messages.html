@@ -1,0 +1,86 @@
+<p-toast></p-toast>
+
+<div class="mb-sent">
+  <div class="mb-sent__header">
+    <h1 class="mb-sent__title">
+      <i class="pi pi-send"></i>
+      Sent
+    </h1>
+    <p-tag
+      [value]="totalRecords() + ' messages'"
+      severity="secondary"
+      styleClass="mb-sent__count">
+    </p-tag>
+  </div>
+
+  <p-card styleClass="mb-sent__card">
+    @if (loading()) {
+      <div class="mb-sent__skeleton">
+        @for (i of [1,2,3,4,5]; track i) {
+          <div class="mb-sent__skeleton-row">
+            <p-skeleton width="2rem" height="2rem" borderRadius="50%"></p-skeleton>
+            <div class="mb-sent__skeleton-content">
+              <p-skeleton width="30%" height="0.875rem"></p-skeleton>
+              <p-skeleton width="60%" height="0.875rem"></p-skeleton>
+              <p-skeleton width="80%" height="0.75rem"></p-skeleton>
+            </div>
+            <p-skeleton width="7rem" height="0.75rem"></p-skeleton>
+          </div>
+          <p-divider></p-divider>
+        }
+      </div>
+    } @else if (messages().length === 0) {
+      <div class="mb-sent__empty">
+        <i class="pi pi-send mb-sent__empty-icon"></i>
+        <p>No sent messages</p>
+      </div>
+    } @else {
+      <ul class="mb-sent__list">
+        @for (message of messages(); track message.id) {
+          <li
+            class="mb-sent__item"
+            (click)="openMessage(message)"
+            role="button"
+            tabindex="0"
+            (keydown.enter)="openMessage(message)">
+
+            <div class="mb-sent__item-avatar">
+              <div class="mb-sent__avatar-circle">
+                {{ message.recipientName?.charAt(0)?.toUpperCase() ?? '?' }}
+              </div>
+            </div>
+
+            <div class="mb-sent__item-content">
+              <div class="mb-sent__item-meta">
+                <span class="mb-sent__recipient">
+                  <span class="mb-sent__label">To:</span>
+                  {{ message.recipientName }}
+                </span>
+                <span class="mb-sent__datetime">{{ message.sentAt | date: 'MMM d, y, h:mm a' }}</span>
+              </div>
+              <div class="mb-sent__subject">{{ message.subject || '(no subject)' }}</div>
+              <div class="mb-sent__preview">{{ message.body }}</div>
+            </div>
+
+          </li>
+        }
+      </ul>
+
+      @if (totalRecords() > pageSize) {
+        <p-paginator
+          [rows]="pageSize"
+          [totalRecords]="totalRecords()"
+          [first]="(page() - 1) * pageSize"
+          (onPageChange)="onPageChange($event)"
+          styleClass="mb-sent__paginator">
+        </p-paginator>
+      }
+    }
+  </p-card>
+</div>
+
+<app-message-view-modal
+  [visible]="showMessageView()"
+  [message]="selectedMessage()"
+  (close)="onMessageViewClose()">
+</app-message-view-modal>
