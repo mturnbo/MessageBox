@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Dialog } from 'primeng/dialog';
 import { InputText } from 'primeng/inputtext';
@@ -30,7 +30,7 @@ import { User } from '../../models/user.model';
   templateUrl: './compose-modal.html',
   styleUrl: './compose-modal.scss',
 })
-export class ComposeModalComponent implements OnInit {
+export class ComposeModalComponent implements OnInit, OnChanges {
   @Input() visible = false;
   @Output() close = new EventEmitter<void>();
   @Output() sent = new EventEmitter<void>();
@@ -38,6 +38,7 @@ export class ComposeModalComponent implements OnInit {
   form: FormGroup;
   loading = false;
   errorMessage = '';
+  private clientMessageId = crypto.randomUUID();
 
   allUsers: User[] = [];
   filteredUsers: User[] = [];
@@ -59,15 +60,25 @@ export class ComposeModalComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    const username = this.authService.currentUser()?.username;
-    if (username) {
-      this.userService.getUserById(username).subscribe({
-        next: (user) => {
-          this.currentUserId = user.id;
-          this.loadUsers();
-        },
-      });
+    this.resolveCurrentUser();
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['visible']?.currentValue === true && this.allUsers.length === 0) {
+      this.resolveCurrentUser();
     }
+  }
+
+  private resolveCurrentUser(): void {
+    const username = this.authService.currentUser()?.username;
+    if (!username) return;
+
+    this.userService.getUserById(username).subscribe({
+      next: (user) => {
+        this.currentUserId = user.id;
+        this.loadUsers();
+      },
+    });
   }
 
   private loadUsers(): void {
@@ -107,6 +118,7 @@ export class ComposeModalComponent implements OnInit {
 
     this.messageService
       .createMessage({
+        clientMessageId: this.clientMessageId,
         senderId: this.currentUserId,
         recipientId: recipient.id,
         subject: this.form.value.subject || undefined,
@@ -134,6 +146,7 @@ export class ComposeModalComponent implements OnInit {
   private resetAndClose(): void {
     this.form.reset();
     this.selectedRecipient = null;
+    this.clientMessageId = crypto.randomUUID();
     this.close.emit();
   }
 

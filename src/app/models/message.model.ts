@@ -16,6 +16,7 @@ export interface Message {
 }
 
 export interface CreateMessageRequest {
+  clientMessageId: string;
   senderId: number;
   recipientId: number;
   subject?: string;
