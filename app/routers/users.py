@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.security import HTTPBearer
 from typing import List
@@ -55,7 +55,7 @@ def create_user(
         first_name=user_data.first_name,
         last_name=user_data.last_name,
         device_address=user_data.device_address,
-        created_at=datetime.utcnow().isoformat()
+        created_at=datetime.now(timezone.utc)
     )
 
     session.add(new_user)
