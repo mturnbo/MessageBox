@@ -1,27 +1,15 @@
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPBearer
 from typing import List
 from sqlmodel import Session, select
 from app.models.dbmodels import User, UserPublic
 from app.models.newuser import NewUser
 from app.database import get_session
-from app.models.token import Token
-from app.utilites.password import compare_password, create_access_token, verify_token, generate_hashed_password
-from app.models.auth_credentials import AuthCredentials
+from app.utilites.password import verify_token, generate_hashed_password
 
 router = APIRouter(prefix="/users", tags=["users"])
 security = HTTPBearer()
-
-@router.post("/auth", response_model=Token)
-def authenticate_user(auth_cred: AuthCredentials, session: Session = Depends(get_session)):
-    user = session.exec(select(User).where(User.username == auth_cred.username)).first()
-    if compare_password(auth_cred.password, user.password_hash):
-        token_str = create_access_token(data={"sub": user.username})
-        token = Token(token=token_str)
-        return token
-
-    return HTTPException(status_code=401, detail="Invalid credentials")
 
 @router.get("/", response_model=List[UserPublic])
 def get_all_users(
