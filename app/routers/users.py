@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import List
@@ -16,12 +16,11 @@ security = HTTPBearer()
 @router.post("/auth", response_model=Token)
 def authenticate_user(auth_cred: AuthCredentials, session: Session = Depends(get_session)):
     user = session.exec(select(User).where(User.username == auth_cred.username)).first()
-    if compare_password(auth_cred.password, user.password_hash):
-        token_str = create_access_token(data={"sub": user.username})
-        token = Token(token=token_str)
-        return token
+    if not user or not compare_password(auth_cred.password, user.password_hash):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    return HTTPException(status_code=401, detail="Invalid credentials")
+    token_str = create_access_token(data={"sub": user.username})
+    return Token(token=token_str)
 
 @router.get("/", response_model=List[UserPublic])
 def get_all_users(
@@ -67,7 +66,7 @@ def create_user(
         first_name=user_data.first_name,
         last_name=user_data.last_name,
         device_address=user_data.device_address,
-        created_at=datetime.utcnow().isoformat()
+        created_at=datetime.now(timezone.utc)
     )
 
     session.add(new_user)
