@@ -1,0 +1,19 @@
+<!-- Messaging App Icon (outline) -->
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="24" height="24" viewBox="0 0 24 24"
+     fill="none" stroke="currentColor" stroke-width="1.8"
+     stroke-linecap="round" stroke-linejoin="round"
+     role="img" aria-labelledby="msgIconTitle msgIconDesc">
+    <title id="msgIconTitle">Messaging icon</title>
+    <desc id="msgIconDesc">Chat bubble with three typing dots</desc>
+
+    <!-- Bubble -->
+    <rect x="3" y="3" width="18" height="14" rx="4" />
+    <!-- Tail -->
+    <path d="M8 17 L4 20 V17" />
+
+    <!-- Typing dots -->
+    <circle cx="9" cy="10" r="1.25" fill="currentColor" stroke="none"/>
+    <circle cx="12" cy="10" r="1.25" fill="currentColor" stroke="none"/>
+    <circle cx="15" cy="10" r="1.25" fill="currentColor" stroke="none"/>
+</svg>
