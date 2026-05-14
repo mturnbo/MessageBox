@@ -1,0 +1,139 @@
+###
+POST http://localhost:8000/auth
+Content-Type: application/json
+
+{
+  "username": "testuser1",
+  "password": "password123"
+}
+
+> {% client.global.set("auth_token", response.body.token); %}
+
+###
+GET http://localhost:8000/users/
+Authorization: Bearer {{auth_token}}
+
+###
+GET http://localhost:8000/users/10/5
+Authorization: Bearer {{auth_token}}
+
+###
+GET http://localhost:8000/users/10001
+Authorization: Bearer {{auth_token}}
+
+###
+GET http://localhost:8000/users/testuser1
+Authorization: Bearer {{auth_token}}
+
+###
+GET http://localhost:8000/users/email.address.1@email.com
+Authorization: Bearer {{auth_token}}
+
+###
+GET http://localhost:8000/messages/2
+Authorization: Bearer {{auth_token}}
+
+###
+GET https://baconipsum.com/api/?type=all-meat&paras=3&start-with-lorem=1
+
+> {% client.global.set("lipsum", response.body); %}
+
+
+###
+POST http://localhost:8000/messages/post
+Content-Type: application/json
+Authorization: Bearer {{auth_token}}
+
+{
+  "senderId": 99,
+  "recipientId": 100,
+  "subject": "TEST 1",
+  "body": "{{lipsum}}",
+  "senderAddress": "12.34.56.78"
+}
+
+> {% client.global.set("newmsgid", response.body.id); %}
+
+###
+POST http://localhost:8000/messages/post
+Content-Type: application/json
+Authorization: Bearer {{auth_token}}
+
+{
+  "senderId": 100,
+  "recipientId": 99,
+  "subject": "TEST 2",
+  "body": "{{lipsum}}",
+  "senderAddress": "98.76.54.32"
+}
+
+> {% client.global.set("newmsgid", response.body.id); %}
+
+###
+POST http://localhost:8000/messages/read
+Content-Type: application/json
+Authorization: Bearer {{auth_token}}
+
+{
+  "id": {{newmsgid}},
+  "readerAddress": "10.11.12.13"
+}
+
+###
+POST http://localhost:8000/messages/delete
+Content-Type: application/json
+Authorization: Bearer {{auth_token}}
+
+{
+  "id": 4,
+  "deletedBy": 10076
+}
+
+###
+POST http://localhost:8000/users/update
+Content-Type: application/json
+Authorization: Bearer {{auth_token}}
+
+{
+  "id": "99",
+  "userUpdate": {
+    "lastName": "User",
+    "email": "email.address@email.com",
+    "deviceAddress": "74.45.45.99"
+  }
+}
+
+###
+POST http://localhost:8000/messages/reply
+Content-Type: application/json
+Authorization: Bearer {{auth_token}}
+
+{
+  "clientMessageId": "reply-75-a",
+  "replyToId": 75,
+  "senderId": 100,
+  "recipientId": 99,
+  "subject": "REPLY TO 75",
+  "body": "{{lipsum}}",
+  "senderAddress": "198.176.154.132"
+}
+
+> {% client.global.set("newmsgid", response.body.id); %}
+
+
+###
+POST http://localhost:8000/messages/reply
+Content-Type: application/json
+Authorization: Bearer {{auth_token}}
+
+{
+  "clientMessageId": "reply-75-b",
+  "replyToId": 75,
+  "senderId": 100,
+  "recipientId": 99,
+  "subject": "REPLY TO 75",
+  "body": "reply test reply test reply test",
+  "senderAddress": "19.17.15.13"
+}
+
+> {% client.global.set("newmsgid", response.body.id); %}
