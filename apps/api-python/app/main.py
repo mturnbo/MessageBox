@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.routers import auth, users, messages
+from app.routers import auth, users, messages, health
 from fastapi.middleware.cors import CORSMiddleware
 
 origins = [
@@ -20,6 +20,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(messages.router)
+app.include_router(health.router)
 
 def main():
     import uvicorn
