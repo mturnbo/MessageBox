@@ -8,6 +8,7 @@ import indexRouter from '#routes/index.routes.js';
 import authRouter from '#routes/auth.routes.js';
 import usersRouter from '#routes/user.routes.js';
 import messagesRouter from '#routes/message.routes.js';
+import healthRouter from '#routes/health.routes.js';
 
 import { notFound } from '#middlewares/notFound.js';
 import { handleError } from '#middlewares/handleError.js';
@@ -45,6 +46,7 @@ const expressService = {
       server.use('/auth', authRouter);
       server.use('/users', usersRouter);
       server.use('/messages', messagesRouter);
+      server.use('/health', healthRouter);
 
       // error handling middleware
       server.use(notFound);
