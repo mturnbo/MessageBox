@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Progress Bar – Demo</title>
+  <link rel="stylesheet" href="progress-bar.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: #f9fafb;
+      color: #111827;
+      padding: 3rem 2rem;
+    }
+
+    h1 { font-size: 1.5rem; margin-bottom: 0.25rem; }
+    p  { color: #6b7280; margin-bottom: 2.5rem; }
+
+    .demo-section {
+      margin-bottom: 2.5rem;
+    }
+
+    .demo-section label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #6b7280;
+      margin-bottom: 0.5rem;
+    }
+
+    /* ── container examples ───────────────────────────────────────────────── */
+
+    /* Thin pill */
+    .bar-thin {
+      height: 8px;
+      border-radius: 9999px;
+      position: relative;
+    }
+
+    /* Standard */
+    .bar-standard {
+      height: 24px;
+      border-radius: 6px;
+      position: relative;
+    }
+
+    /* Chunky */
+    .bar-chunky {
+      height: 48px;
+      border-radius: 12px;
+      position: relative;
+    }
+
+    .controls {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: 0.75rem;
+    }
+
+    button {
+      padding: 0.4rem 1rem;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      background: #fff;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    button:hover { background: #f3f4f6; }
+
+    code {
+      display: block;
+      background: #1e293b;
+      color: #94a3b8;
+      padding: 1.25rem 1.5rem;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      line-height: 1.65;
+      margin-top: 2rem;
+    }
+    code .kw  { color: #7dd3fc; }
+    code .fn  { color: #a5f3fc; }
+    code .str { color: #86efac; }
+    code .cm  { color: #64748b; }
+    code .num { color: #fca5a5; }
+  </style>
+</head>
+<body>
+
+<h1>Progress Bar</h1>
+<p>Polls an API at a given interval. Fills its container. Stops at 100%.</p>
+
+<!-- ── Demo 1: thin pill ─────────────────────────────────────────────────── -->
+<div class="demo-section">
+  <label>Thin pill – 500 ms interval – indigo</label>
+  <div id="bar1" class="bar-thin"></div>
+  <div class="controls">
+    <button onclick="bars.b1.stop()">Stop</button>
+    <button onclick="bars.b1.resume()">Resume</button>
+    <button onclick="restart('b1', 'bar1', 500, '#6366f1')">Restart</button>
+  </div>
+</div>
+
+<!-- ── Demo 2: standard ──────────────────────────────────────────────────── -->
+<div class="demo-section">
+  <label>Standard – 800 ms interval – emerald</label>
+  <div id="bar2" class="bar-standard"></div>
+  <div class="controls">
+    <button onclick="bars.b2.stop()">Stop</button>
+    <button onclick="bars.b2.resume()">Resume</button>
+    <button onclick="restart('b2', 'bar2', 800, '#10b981')">Restart</button>
+  </div>
+</div>
+
+<!-- ── Demo 3: chunky ────────────────────────────────────────────────────── -->
+<div class="demo-section">
+  <label>Chunky – 1200 ms interval – rose</label>
+  <div id="bar3" class="bar-chunky"></div>
+  <div class="controls">
+    <button onclick="bars.b3.stop()">Stop</button>
+    <button onclick="bars.b3.resume()">Resume</button>
+    <button onclick="restart('b3', 'bar3', 1200, '#f43f5e')">Restart</button>
+  </div>
+</div>
+
+<!-- ── Usage snippet ─────────────────────────────────────────────────────── -->
+<code>
+<span class="cm">// 1. Load assets</span><br>
+&lt;link rel=<span class="str">"stylesheet"</span> href=<span class="str">"progress-bar.css"</span>&gt;<br>
+&lt;script src=<span class="str">"progress-bar.js"</span>&gt;&lt;/script&gt;<br><br>
+<span class="cm">// 2. Give your container an explicit height (any width works)</span><br>
+&lt;div id=<span class="str">"my-bar"</span> style=<span class="str">"height:24px;border-radius:6px;position:relative"</span>&gt;&lt;/div&gt;<br><br>
+<span class="cm">// 3. Create</span><br>
+<span class="kw">const</span> bar = <span class="fn">createProgressBar</span>(document.<span class="fn">getElementById</span>(<span class="str">'my-bar'</span>), {<br>
+&nbsp;&nbsp;endpoint: <span class="str">'/api/progress'</span>,   <span class="cm">// returns { progress: 0–100 }</span><br>
+&nbsp;&nbsp;interval: <span class="num">1000</span>,              <span class="cm">// ms between polls</span><br>
+&nbsp;&nbsp;color:    <span class="str">'#4f46e5'</span>,         <span class="cm">// any CSS colour</span><br>
+});<br><br>
+<span class="cm">// 4. Control</span><br>
+bar.<span class="fn">stop</span>();              <span class="cm">// pause polling</span><br>
+bar.<span class="fn">resume</span>();            <span class="cm">// restart polling</span><br>
+bar.<span class="fn">setProgress</span>(<span class="num">42</span>);    <span class="cm">// set manually (stops polling at 100)</span><br>
+bar.<span class="fn">destroy</span>();           <span class="cm">// remove from DOM + stop polling</span>
+</code>
+
+<script src="progress-bar.js"></script>
+<script>
+  // ── Mock API ──────────────────────────────────────────────────────────────
+  // Intercepts fetch() calls that start with "/mock-progress/" so the demo
+  // works offline without a real server.
+  const _fetch = window.fetch.bind(window);
+  const mockState = {};
+
+  window.fetch = function (url, init) {
+    if (typeof url === 'string' && url.startsWith('/mock-progress/')) {
+      const key = url;
+      if (!mockState[key]) mockState[key] = 0;
+      mockState[key] = Math.min(100, mockState[key] + (Math.random() * 8 + 2));
+      return Promise.resolve(
+        new Response(JSON.stringify({ progress: mockState[key] }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      );
+    }
+    return _fetch(url, init);
+  };
+
+  // ── Bars ──────────────────────────────────────────────────────────────────
+  const bars = {
+    b1: createProgressBar(document.getElementById('bar1'), {
+      endpoint: '/mock-progress/job-1',
+      interval: 500,
+      color: '#6366f1',
+    }),
+    b2: createProgressBar(document.getElementById('bar2'), {
+      endpoint: '/mock-progress/job-2',
+      interval: 800,
+      color: '#10b981',
+    }),
+    b3: createProgressBar(document.getElementById('bar3'), {
+      endpoint: '/mock-progress/job-3',
+      interval: 1200,
+      color: '#f43f5e',
+    }),
+  };
+
+  function restart(key, containerId, interval, color) {
+    bars[key].destroy();
+    delete mockState['/mock-progress/' + containerId];
+    bars[key] = createProgressBar(document.getElementById(containerId), {
+      endpoint: '/mock-progress/' + containerId,
+      interval,
+      color,
+    });
+  }
+</script>
+
+</body>
+</html>

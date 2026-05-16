@@ -1,0 +1,82 @@
+/* ── Progress Bar ────────────────────────────────────────────────────────── */
+
+/*
+ * The bar is injected as two children of your container:
+ *   .pb-track  — the grey runway, fills 100% × 100% of the container
+ *   .pb-fill   — the coloured fill, grows left → right
+ *   .pb-label  — centred percentage text
+ *
+ * Your container must have an explicit height (e.g. 20px, 2rem, etc).
+ * Width is always 100% of the container.
+ */
+
+.pb-track {
+  position: absolute;
+  inset: 0;                       /* fill the container completely */
+  background-color: #e5e7eb;
+  border-radius: inherit;         /* adopt container's border-radius */
+  overflow: hidden;
+}
+
+.pb-fill {
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  width: 0%;
+  background-color: var(--pb-color, #4f46e5);
+  border-radius: inherit;
+  transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* subtle shimmer while in progress */
+  background-image: linear-gradient(
+    110deg,
+    transparent 25%,
+    rgba(255, 255, 255, 0.18) 50%,
+    transparent 75%
+  );
+  background-size: 200% 100%;
+  animation: pb-shimmer 1.6s linear infinite;
+}
+
+.pb-complete .pb-fill {
+  animation: none;                /* stop shimmer when done */
+  background-image: none;
+}
+
+/* percentage label */
+.pb-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72em;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: #fff;
+  /* readable on both light track and coloured fill */
+  text-shadow:
+    0 0 3px rgba(0, 0, 0, 0.45),
+    0 1px 2px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+  user-select: none;
+  /* hide when container is too short to show text legibly */
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* error state – turn track red to signal a failed poll */
+.pb-track.pb-error {
+  background-color: #fee2e2;
+}
+
+.pb-track.pb-error .pb-fill {
+  background-color: #ef4444 !important;
+  --pb-color: #ef4444;
+}
+
+/* shimmer keyframe */
+@keyframes pb-shimmer {
+  0%   { background-position: 200% center; }
+  100% { background-position: -200% center; }
+}
