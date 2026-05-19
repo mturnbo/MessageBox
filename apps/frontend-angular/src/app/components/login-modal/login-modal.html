@@ -1,0 +1,56 @@
+<p-dialog
+  [(visible)]="visible"
+  [closable]="false"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  styleClass="mb-login-dialog"
+  [style]="{ width: '400px' }">
+
+  <ng-template #header>
+    <div class="mb-login-dialog__header">
+      <i class="pi pi-inbox mb-login-dialog__icon"></i>
+      <div>
+        <h2 class="mb-login-dialog__title">MessageBox</h2>
+        <p class="mb-login-dialog__subtitle">Sign in to your account</p>
+      </div>
+    </div>
+  </ng-template>
+
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="mb-login-form">
+    @if (errorMessage) {
+      <p-message severity="error" [text]="errorMessage" styleClass="w-full mb-3"></p-message>
+    }
+
+    <p-floatlabel class="mb-login-form__field">
+      <input
+        pInputText
+        id="username"
+        formControlName="username"
+        autocomplete="username"
+        class="w-full" />
+      <label for="username">Username</label>
+    </p-floatlabel>
+
+    <p-floatlabel class="mb-login-form__field">
+      <p-password
+        inputId="password"
+        formControlName="password"
+        [feedback]="false"
+        [toggleMask]="true"
+        autocomplete="current-password"
+        styleClass="w-full">
+      </p-password>
+      <label for="password">Password</label>
+    </p-floatlabel>
+
+    <p-button
+      type="submit"
+      label="Sign In"
+      icon="pi pi-sign-in"
+      [loading]="loading"
+      [disabled]="form.invalid"
+      styleClass="w-full mb-login-form__submit">
+    </p-button>
+  </form>
+</p-dialog>

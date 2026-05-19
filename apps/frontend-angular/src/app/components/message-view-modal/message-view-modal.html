@@ -1,0 +1,70 @@
+<p-dialog
+  [(visible)]="visible"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  (onHide)="onClose()"
+  styleClass="mb-message-dialog"
+  [style]="{ width: '640px', maxWidth: '95vw' }">
+
+  <ng-template #header>
+    <div class="mb-message-dialog__header">
+      <i class="pi pi-envelope mb-message-dialog__icon"></i>
+      <h3 class="mb-message-dialog__subject">
+        {{ message?.subject || '(no subject)' }}
+      </h3>
+    </div>
+  </ng-template>
+
+  @if (message) {
+    <div class="mb-message-view">
+      <div class="mb-message-view__meta">
+        <div class="mb-message-view__meta-row">
+          <span class="mb-message-view__label">From</span>
+          <div class="mb-message-view__sender">
+            <div class="mb-message-view__avatar">
+              {{ message.senderName?.charAt(0)?.toUpperCase() ?? '?' }}
+            </div>
+            <div>
+              <div class="mb-message-view__sender-name">{{ message.senderName ?? 'Unknown sender' }}</div>
+              <div class="mb-message-view__sender-id">User #{{ message.senderId }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mb-message-view__meta-row">
+          <span class="mb-message-view__label">Date</span>
+          <span class="mb-message-view__value">{{ message.sentAt | date: 'MMMM d, y, h:mm a' }}</span>
+        </div>
+
+        @if (message.readAt) {
+          <div class="mb-message-view__meta-row">
+            <span class="mb-message-view__label">Read</span>
+            <p-tag severity="success" value="Read" icon="pi pi-check"></p-tag>
+          </div>
+        } @else {
+          <div class="mb-message-view__meta-row">
+            <span class="mb-message-view__label">Status</span>
+            <p-tag severity="warn" value="Unread"></p-tag>
+          </div>
+        }
+      </div>
+
+      <p-divider></p-divider>
+
+      <div class="mb-message-view__body">
+        {{ message.body || '(empty message)' }}
+      </div>
+    </div>
+  }
+
+  <ng-template #footer>
+    <p-button
+      label="Close"
+      icon="pi pi-times"
+      severity="secondary"
+      [outlined]="true"
+      (onClick)="onClose()">
+    </p-button>
+  </ng-template>
+</p-dialog>

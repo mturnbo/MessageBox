@@ -1,0 +1,87 @@
+.mb-message-dialog {
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  &__icon {
+    font-size: 1.25rem;
+    color: var(--p-primary-500);
+  }
+
+  &__subject {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--p-text-color);
+  }
+}
+
+.mb-message-view {
+  &__meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  &__meta-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  &__label {
+    width: 4rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--p-text-muted-color);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    flex-shrink: 0;
+  }
+
+  &__value {
+    font-size: 0.9375rem;
+    color: var(--p-text-color);
+  }
+
+  &__sender {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  &__avatar {
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 50%;
+    background: var(--p-primary-500);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.9375rem;
+  }
+
+  &__sender-name {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--p-text-color);
+  }
+
+  &__sender-id {
+    font-size: 0.75rem;
+    color: var(--p-text-muted-color);
+  }
+
+  &__body {
+    font-size: 0.9375rem;
+    line-height: 1.7;
+    color: var(--p-text-color);
+    white-space: pre-wrap;
+    word-break: break-word;
+    min-height: 5rem;
+  }
+}

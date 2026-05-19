@@ -1,0 +1,64 @@
+<p-toolbar styleClass="mb-header">
+  <ng-template #start>
+    <div class="mb-header__brand">
+      <i class="pi pi-inbox mb-header__logo"></i>
+      <span class="mb-header__title">MessageBox</span>
+    </div>
+  </ng-template>
+
+  <ng-template #end>
+    @if (isLoggedIn()) {
+      <div class="mb-header__actions">
+
+        <!-- Inbox nav button with unread badge -->
+        <a [routerLink]="['/inbox']" routerLinkActive="mb-header__nav-btn--active" class="mb-header__nav-btn">
+          <p-button
+            icon="pi pi-inbox"
+            label="Inbox"
+            [text]="true"
+            [badge]="inboxUnread() > 0 ? inboxUnread().toString() : ''"
+            badgeSeverity="danger"
+            styleClass="mb-header__nav-btn-inner">
+          </p-button>
+        </a>
+
+        <!-- Sent nav button with total count badge -->
+        <a [routerLink]="['/sent']" routerLinkActive="mb-header__nav-btn--active" class="mb-header__nav-btn">
+          <p-button
+            icon="pi pi-send"
+            label="Sent"
+            [text]="true"
+            [badge]="sentTotal() > 0 ? sentTotal().toString() : ''"
+            badgeSeverity="secondary"
+            styleClass="mb-header__nav-btn-inner">
+          </p-button>
+        </a>
+
+        <div class="mb-header__divider"></div>
+
+        <!-- Compose -->
+        <p-button
+          label="Compose"
+          icon="pi pi-pencil"
+          (onClick)="openCompose()">
+        </p-button>
+
+        <!-- User avatar + dropdown menu -->
+        <div class="mb-header__avatar-wrap" (click)="userMenu.toggle($event)">
+          <p-avatar
+            [label]="currentUser()?.username?.charAt(0)?.toUpperCase() ?? 'U'"
+            shape="circle"
+            styleClass="mb-header__avatar">
+          </p-avatar>
+        </div>
+
+        <p-menu #userMenu [model]="menuItems" [popup]="true"></p-menu>
+      </div>
+    }
+  </ng-template>
+</p-toolbar>
+
+<app-compose-modal
+  [visible]="showCompose"
+  (close)="onComposeClose()">
+</app-compose-modal>

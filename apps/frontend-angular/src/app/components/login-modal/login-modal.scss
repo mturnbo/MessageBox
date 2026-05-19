@@ -1,0 +1,40 @@
+.mb-login-dialog {
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding-bottom: 0.25rem;
+  }
+
+  &__icon {
+    font-size: 2.5rem;
+    color: var(--p-primary-500);
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--p-primary-700);
+  }
+
+  &__subtitle {
+    margin: 0.125rem 0 0;
+    font-size: 0.875rem;
+    color: var(--p-text-muted-color);
+  }
+}
+
+.mb-login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+
+  &__field {
+    width: 100%;
+  }
+
+  &__submit {
+    margin-top: 0.5rem;
+  }
+}

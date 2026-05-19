@@ -1,0 +1,14 @@
+<p-toast position="top-right" [breakpoints]="{'920px': {width: '100%', right: '0', left: '0'}}"></p-toast>
+
+<app-header></app-header>
+
+<main class="mb-main-content">
+  @if (!showLogin()) {
+    <router-outlet></router-outlet>
+  }
+</main>
+
+<app-login-modal
+  [visible]="showLogin()"
+  (loginSuccess)="onLoginSuccess()">
+</app-login-modal>
