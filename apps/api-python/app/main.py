@@ -1,7 +1,12 @@
 from fastapi import FastAPI
 from app.routers import auth, users, messages, health
 from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
+import os
 
+load_dotenv()
+
+# TODO: update origins ports
 origins = [
     "http://localhost",
     "http://localhost:5173",
@@ -24,7 +29,8 @@ app.include_router(health.router)
 
 def main():
     import uvicorn
-    uvicorn.run("app.main:app", host="127.0.0.1", port=4000)
+    port = os.getenv("PORT", "4000")
+    uvicorn.run("app.main:app", host="127.0.0.1", port=port)
 
 if __name__ == "__main__":
     main()
