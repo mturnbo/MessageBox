@@ -23,6 +23,7 @@ module.exports = {
       env: {
         NODE_ENV: 'development',
         PORT: 4021,
+        ORIGIN: 4201,
       },
       // Production Environment
       env_production: {
@@ -33,7 +34,7 @@ module.exports = {
     {
       name: 'messagebox-frontend-angular',
       script: 'npx',
-      args: 'serve -s ./frontend-angular/dist/frontend/browser',
+      args: 'serve -s ./apps/frontend-angular/dist/message-box/browser',
       interpreter: 'none',
       env: {
         NODE_ENV: 'development',
@@ -47,7 +48,7 @@ module.exports = {
     {
       name: 'messagebox-frontend-react',
       script: 'npx',
-      args: 'serve -s ./frontend-react/dist/frontend/browser',
+      args: 'serve -s ./appa/frontend-react/dist/frontend/browser',
       interpreter: 'none',
       env: {
         NODE_ENV: 'development',
