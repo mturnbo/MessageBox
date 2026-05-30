@@ -1,6 +1,7 @@
 {
-  "name": "message-box",
-  "version": "0.0.0",
+  "name": "messagebox-frontend-angular",
+  "author": "Marcus E. Turnbo",
+  "version": "1.1.0",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
@@ -8,7 +9,7 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
   },
-  "private": true,
+  "private": false,
   "packageManager": "npm@10.9.0",
   "dependencies": {
     "@angular/animations": "^21.2.1",
