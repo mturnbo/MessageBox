@@ -24,15 +24,16 @@ class UserPublic(UserBase):
 
 class Message(SQLModel, table=True):
     __tablename__ = "messages"
-    id: int = Field(primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     sender_id: int = Field(foreign_key="users.id")
     recipient_id: int = Field(foreign_key="users.id")
-    subject: str
-    body: str
+    subject: str | None = None
+    body: str | None = None
     sent_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    sender_address: str
+    sender_address: str | None = None
+    client_message_id: str | None = Field(default=None, unique=True)
     read_at: datetime | None = None
     reader_address: str | None = None
-    is_deleted_by_sender: bool = False
-    is_deleted_by_recipient: bool = False
+    deleted_by_sender: datetime | None = None
+    deleted_by_recipient: datetime | None = None
 
