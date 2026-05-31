@@ -177,14 +177,14 @@ def test_message_sent_at_defaults(session, two_users):
     assert isinstance(msg.sent_at, datetime)
 
 
-def test_message_soft_delete_flags_default_false(session, two_users):
+def test_message_soft_delete_flags_default_none(session, two_users):
     alice, bob = two_users
     msg = make_message(sender_id=alice.id, recipient_id=bob.id)
     session.add(msg)
     session.commit()
     session.refresh(msg)
-    assert msg.is_deleted_by_sender is False
-    assert msg.is_deleted_by_recipient is False
+    assert msg.deleted_by_sender is None
+    assert msg.deleted_by_recipient is None
 
 
 def test_message_optional_fields_default_none(session, two_users):
@@ -215,17 +215,18 @@ def test_message_read_fields_settable(session, two_users):
 
 def test_message_soft_delete_flags_settable(session, two_users):
     alice, bob = two_users
+    now = datetime.now(timezone.utc)
     msg = make_message(
         sender_id=alice.id,
         recipient_id=bob.id,
-        is_deleted_by_sender=True,
-        is_deleted_by_recipient=True,
+        deleted_by_sender=now,
+        deleted_by_recipient=now,
     )
     session.add(msg)
     session.commit()
     session.refresh(msg)
-    assert msg.is_deleted_by_sender is True
-    assert msg.is_deleted_by_recipient is True
+    assert msg.deleted_by_sender is not None
+    assert msg.deleted_by_recipient is not None
 
 
 def test_message_filter_by_sender(session, two_users):
