@@ -1,7 +1,8 @@
 # Database Models
 
 import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
+from pydantic.alias_generators import to_camel
 from sqlmodel import SQLModel, Field, Column
 from datetime import datetime, timezone
 
@@ -53,7 +54,11 @@ class ThreadMessage(SQLModel, table=True):
     reply_to: int = Field(foreign_key="messages.id", primary_key=True)
 
 
+_camel = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+
 class CreateMessageRequest(BaseModel):
+    model_config = _camel
     sender_id: int
     recipient_id: int
     subject: str | None = None
@@ -63,6 +68,7 @@ class CreateMessageRequest(BaseModel):
 
 
 class ReplyToMessageRequest(BaseModel):
+    model_config = _camel
     reply_to_id: int
     sender_id: int
     recipient_id: int
@@ -73,11 +79,44 @@ class ReplyToMessageRequest(BaseModel):
 
 
 class ReadMessageRequest(BaseModel):
+    model_config = _camel
     id: int
     reader_address: str | None = None
 
 
 class DeleteMessageRequest(BaseModel):
+    model_config = _camel
     id: int
     deleted_by: int
+
+
+# ── Response models (camelCase for Angular/Node parity) ───────────────────────
+
+class MessageOut(BaseModel):
+    model_config = _camel
+    id: int | None = None
+    sender_id: int
+    recipient_id: int
+    subject: str | None = None
+    body: str | None = None
+    sent_at: datetime
+    sender_address: str | None = None
+    client_message_id: str | None = None
+    read_at: datetime | None = None
+    reader_address: str | None = None
+    deleted_by_sender: datetime | None = None
+    deleted_by_recipient: datetime | None = None
+
+
+class MessageListResponse(BaseModel):
+    messages: list[MessageOut]
+    total: int
+    page: int
+    limit: int
+
+
+class MessagePostResponse(MessageOut):
+    thread_id: int | None = None
+    reply_to: int | None = None
+    idempotency_replayed: bool = False
 

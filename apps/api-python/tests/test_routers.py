@@ -262,16 +262,16 @@ def test_get_sent_messages(client, session, two_users):
     alice, bob = two_users
     make_message(session, alice.id, bob.id, subject="msg1")
     make_message(session, alice.id, bob.id, subject="msg2")
-    resp = client.get(f"/messages/sent?sender_id={alice.id}", headers=auth_headers())
+    resp = client.get(f"/messages/sent?senderId={alice.id}", headers=auth_headers())
     assert resp.status_code == 200
     body = resp.json()
     assert body["total"] == 2
     assert len(body["messages"]) == 2
-    assert all(m["sender_id"] == alice.id for m in body["messages"])
+    assert all(m["senderId"] == alice.id for m in body["messages"])
 
 
 def test_get_sent_messages_empty(client, session, two_users):
-    resp = client.get("/messages/sent?sender_id=9999", headers=auth_headers())
+    resp = client.get("/messages/sent?senderId=9999", headers=auth_headers())
     assert resp.status_code == 200
     body = resp.json()
     assert body["messages"] == []
@@ -285,7 +285,7 @@ def test_get_sent_missing_sender_id(client):
 
 def test_get_sent_requires_auth(client, session, two_users):
     alice, bob = two_users
-    resp = client.get(f"/messages/sent?sender_id={alice.id}")
+    resp = client.get(f"/messages/sent?senderId={alice.id}")
     assert resp.status_code == 403
 
 
@@ -295,7 +295,7 @@ def test_get_inbox_messages(client, session, two_users):
     alice, bob = two_users
     make_message(session, alice.id, bob.id, subject="for bob")
     make_message(session, alice.id, alice.id, subject="for alice")
-    resp = client.get(f"/messages/inbox?recipient_id={bob.id}", headers=auth_headers())
+    resp = client.get(f"/messages/inbox?recipientId={bob.id}", headers=auth_headers())
     assert resp.status_code == 200
     body = resp.json()
     assert body["total"] == 1
@@ -303,7 +303,7 @@ def test_get_inbox_messages(client, session, two_users):
 
 
 def test_get_inbox_messages_empty(client, session, two_users):
-    resp = client.get("/messages/inbox?recipient_id=9999", headers=auth_headers())
+    resp = client.get("/messages/inbox?recipientId=9999", headers=auth_headers())
     assert resp.status_code == 200
     body = resp.json()
     assert body["messages"] == []
@@ -317,7 +317,7 @@ def test_get_inbox_missing_recipient_id(client):
 
 def test_get_inbox_requires_auth(client, session, two_users):
     alice, bob = two_users
-    resp = client.get(f"/messages/inbox?recipient_id={bob.id}")
+    resp = client.get(f"/messages/inbox?recipientId={bob.id}")
     assert resp.status_code == 403
 
 
@@ -339,7 +339,7 @@ def test_create_message(client, session, two_users):
     assert resp.status_code == 201
     body = resp.json()
     assert body["subject"] == "Hello"
-    assert body["idempotency_replayed"] == False
+    assert body["idempotencyReplayed"] == False
 
 
 def test_create_message_idempotency_replay(client, session, two_users):
@@ -356,7 +356,7 @@ def test_create_message_idempotency_replay(client, session, two_users):
     assert resp1.status_code == 201
     resp2 = client.post("/messages/post", headers=auth_headers(), json=payload)
     assert resp2.status_code == 200
-    assert resp2.json()["idempotency_replayed"] == True
+    assert resp2.json()["idempotencyReplayed"] == True
 
 
 def test_create_message_idempotency_conflict(client, session, two_users):
@@ -416,9 +416,9 @@ def test_reply_to_message(client, session, two_users):
     )
     assert resp.status_code == 201
     body = resp.json()
-    assert body["thread_id"] is not None
-    assert body["reply_to"] == parent.id
-    assert body["idempotency_replayed"] == False
+    assert body["threadId"] is not None
+    assert body["replyTo"] == parent.id
+    assert body["idempotencyReplayed"] == False
 
 
 def test_reply_to_nonexistent_message(client):
@@ -449,7 +449,7 @@ def test_reply_idempotency_replay(client, session, two_users):
     assert resp1.status_code == 201
     resp2 = client.post("/messages/reply", headers=auth_headers(), json=payload)
     assert resp2.status_code == 200
-    assert resp2.json()["idempotency_replayed"] == True
+    assert resp2.json()["idempotencyReplayed"] == True
 
 
 def test_reply_requires_auth(client, session, two_users):
@@ -589,7 +589,7 @@ def test_sent_excludes_soft_deleted(client, session, two_users):
         headers=auth_headers(),
         json={"id": msg.id, "deleted_by": alice.id},
     )
-    resp = client.get(f"/messages/sent?sender_id={alice.id}", headers=auth_headers())
+    resp = client.get(f"/messages/sent?senderId={alice.id}", headers=auth_headers())
     assert resp.status_code == 200
     assert resp.json()["messages"] == []
     assert resp.json()["total"] == 0
@@ -603,7 +603,7 @@ def test_inbox_excludes_soft_deleted(client, session, two_users):
         headers=auth_headers(),
         json={"id": msg.id, "deleted_by": bob.id},
     )
-    resp = client.get(f"/messages/inbox?recipient_id={bob.id}", headers=auth_headers())
+    resp = client.get(f"/messages/inbox?recipientId={bob.id}", headers=auth_headers())
     assert resp.status_code == 200
     assert resp.json()["messages"] == []
     assert resp.json()["total"] == 0
@@ -617,6 +617,6 @@ def test_soft_delete_is_per_party(client, session, two_users):
         headers=auth_headers(),
         json={"id": msg.id, "deleted_by": alice.id},
     )
-    resp = client.get(f"/messages/inbox?recipient_id={bob.id}", headers=auth_headers())
+    resp = client.get(f"/messages/inbox?recipientId={bob.id}", headers=auth_headers())
     assert resp.status_code == 200
     assert resp.json()["total"] == 1
