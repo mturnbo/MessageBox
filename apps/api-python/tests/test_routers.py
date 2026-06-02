@@ -56,7 +56,7 @@ def auth_headers(username="alice"):
 
 def test_auth_returns_token(client, session):
     make_user(session)
-    resp = client.post("/auth/", json={"username": "alice", "password": "secret"})
+    resp = client.post("/auth", json={"username": "alice", "password": "secret"})
     assert resp.status_code == 200
     body = resp.json()
     assert "token" in body
@@ -65,12 +65,12 @@ def test_auth_returns_token(client, session):
 
 def test_auth_wrong_password(client, session):
     make_user(session)
-    resp = client.post("/auth/", json={"username": "alice", "password": "wrong"})
+    resp = client.post("/auth", json={"username": "alice", "password": "wrong"})
     assert resp.status_code == 401
 
 
 def test_auth_unknown_user(client, session):
-    resp = client.post("/auth/", json={"username": "ghost", "password": "x"})
+    resp = client.post("/auth", json={"username": "ghost", "password": "x"})
     assert resp.status_code == 401
 
 
