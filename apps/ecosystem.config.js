@@ -4,12 +4,12 @@ module.exports = {
       name: 'messagebox-api-node',
       script: 'src/app.js',
       env: {
-        NODE_ENV: 'production',
-        PORT: 4021,
+        NODE_ENV: 'development',
+        PORT: 3000,
       },
       env_production: {
         NODE_ENV: 'production',
-        PORT: 8021,
+        PORT: 3001,
       },
     },
     {
@@ -22,27 +22,28 @@ module.exports = {
       // Default Environment (Development)
       env: {
         NODE_ENV: 'development',
-        PORT: 4021,
-        ORIGIN: 4201,
+        PORT: 3000,
+        ORIGIN: 4000,
       },
       // Production Environment
       env_production: {
         NODE_ENV: 'production',
-        PORT: 8021,
+        PORT: 3001,
       },
     },
     {
       name: 'messagebox-frontend-angular',
-      script: 'npx',
-      args: 'serve -s ./apps/frontend-angular/dist/message-box/browser',
+      cwd: `${__dirname}/frontend-angular`,
+      script: 'bash',
+      args: ['-c', 'npm run build -- --configuration development && npx serve -s dist/message-box/browser'],
       interpreter: 'none',
       env: {
         NODE_ENV: 'development',
-        PORT: 4201,
+        PORT: 4000,
       },
       env_production: {
         NODE_ENV: 'production',
-        PORT: 8201,
+        PORT: 4001,
       },
     },
     {
@@ -52,11 +53,11 @@ module.exports = {
       interpreter: 'none',
       env: {
         NODE_ENV: 'development',
-        PORT: 4301,
+        PORT: 4000,
       },
       env_production: {
         NODE_ENV: 'production',
-        PORT: 8301,
+        PORT: 4001,
       },
     }
   ],
