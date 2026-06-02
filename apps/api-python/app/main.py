@@ -8,10 +8,9 @@ load_dotenv()
 
 origins = [
     "http://localhost",
-    "http://localhost:4201",
 ]
 
-origin_port = port = os.getenv("ORIGIN", "")
+origin_port = os.getenv("ORIGIN", "")
 if origin_port:
     origins.append(f"http://localhost:{origin_port}")
 
@@ -32,7 +31,7 @@ app.include_router(health.router)
 
 def main():
     import uvicorn
-    port = os.getenv("PORT", "8000")
+    port = int(os.getenv("PORT", "8000"))
     uvicorn.run("app.main:app", host="127.0.0.1", port=port)
 
 if __name__ == "__main__":
