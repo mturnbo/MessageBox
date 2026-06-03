@@ -24,6 +24,33 @@ class User(UserBase, table=True):
 class UserPublic(UserBase):
     id: int
 
+class UserOut(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+    id: int
+    username: str
+    email: str
+    first_name: str
+    last_name: str
+    device_address: str | None = None
+    date_created: datetime | None = None
+    last_login: datetime | None = None
+
+
+class UserUpdateFields(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+    username: str | None = None
+    email: str | None = None
+    password: str | None = None
+    first_name: str | None = None
+    last_name: str | None = None
+    device_address: str | None = None
+
+
+class UserUpdateRequest(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+    id: int
+    user_update: UserUpdateFields
+
 class Message(SQLModel, table=True):
     __tablename__ = "messages"
     id: int | None = Field(default=None, primary_key=True)

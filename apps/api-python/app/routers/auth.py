@@ -15,5 +15,5 @@ def authenticate_user(auth_cred: AuthCredentials, session: Session = Depends(get
     user = session.exec(select(User).where(User.username == auth_cred.username)).first()
     if user and compare_password(auth_cred.password, user.password_hash):
         token_str = create_access_token(data={"sub": user.username})
-        return Token(token=token_str)
+        return Token(username=user.username, token=token_str)
     raise HTTPException(status_code=401, detail="Invalid credentials")

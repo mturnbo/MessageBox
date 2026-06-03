@@ -59,6 +59,7 @@ def test_auth_returns_token(client, session):
     resp = client.post("/auth", json={"username": "alice", "password": "secret"})
     assert resp.status_code == 200
     body = resp.json()
+    assert body["username"] == "alice"
     assert "token" in body
     assert body["token_type"] == "bearer"
 
@@ -130,6 +131,29 @@ def test_get_user_by_id(client, session):
     assert resp.json()["username"] == "alice"
 
 
+def test_get_user_by_username(client, session):
+    make_user(session)
+    resp = client.get("/users/alice", headers=auth_headers())
+    assert resp.status_code == 200
+    assert resp.json()["username"] == "alice"
+
+
+def test_get_user_by_email(client, session):
+    make_user(session, email="alice@example.com")
+    resp = client.get("/users/alice@example.com", headers=auth_headers())
+    assert resp.status_code == 200
+    assert resp.json()["username"] == "alice"
+
+
+def test_get_user_returns_camel_case(client, session):
+    make_user(session)
+    resp = client.get("/users/alice", headers=auth_headers())
+    body = resp.json()
+    assert "firstName" in body
+    assert "lastName" in body
+    assert "deviceAddress" in body
+
+
 def test_get_user_by_id_not_found(client):
     resp = client.get("/users/9999", headers=auth_headers())
     assert resp.status_code == 404
@@ -161,7 +185,7 @@ def test_register_new_user(client):
             "email": "new@example.com",
         },
     )
-    assert resp.status_code == 200
+    assert resp.status_code == 201
     assert resp.json()["username"] == "newuser"
 
 
@@ -209,6 +233,98 @@ def test_register_requires_auth(client):
         },
     )
     assert resp.status_code == 403
+
+
+# ── GET /users/{limit}/{page} ─────────────────────────────────────────────────
+
+def test_get_all_users_path_pagination_page1(client, session):
+    for i in range(5):
+        make_user(session, username=f"user{i}", email=f"user{i}@example.com")
+    resp = client.get("/users/3/1", headers=auth_headers())
+    assert resp.status_code == 200
+    assert len(resp.json()) == 3
+
+
+def test_get_all_users_path_pagination_page2(client, session):
+    for i in range(5):
+        make_user(session, username=f"user{i}", email=f"user{i}@example.com")
+    resp = client.get("/users/3/2", headers=auth_headers())
+    assert resp.status_code == 200
+    assert len(resp.json()) == 2
+
+
+def test_get_all_users_path_pagination_requires_auth(client, session):
+    make_user(session)
+    resp = client.get("/users/10/1")
+    assert resp.status_code == 403
+
+
+# ── POST /users/update ────────────────────────────────────────────────────────
+
+def test_update_user(client, session):
+    user = make_user(session)
+    resp = client.post(
+        "/users/update",
+        headers=auth_headers(),
+        json={"id": user.id, "userUpdate": {"firstName": "Bob"}},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["firstName"] == "Bob"
+
+
+def test_update_user_not_found(client):
+    resp = client.post(
+        "/users/update",
+        headers=auth_headers(),
+        json={"id": 9999, "userUpdate": {"firstName": "X"}},
+    )
+    assert resp.status_code == 404
+
+
+def test_update_user_requires_auth(client, session):
+    user = make_user(session)
+    resp = client.post("/users/update", json={"id": user.id, "userUpdate": {}})
+    assert resp.status_code == 403
+
+
+# ── DELETE /users/delete/{id} ─────────────────────────────────────────────────
+
+def test_delete_user(client, session):
+    user = make_user(session)
+    resp = client.delete(f"/users/delete/{user.id}", headers=auth_headers())
+    assert resp.status_code == 200
+    assert resp.json()["username"] == "alice"
+    resp2 = client.get(f"/users/{user.id}", headers=auth_headers())
+    assert resp2.status_code == 404
+
+
+def test_delete_user_not_found(client):
+    resp = client.delete("/users/delete/9999", headers=auth_headers())
+    assert resp.status_code == 404
+
+
+def test_delete_user_requires_auth(client, session):
+    user = make_user(session)
+    resp = client.delete(f"/users/delete/{user.id}")
+    assert resp.status_code == 403
+
+
+# ── GET /health ───────────────────────────────────────────────────────────────
+
+def test_health(client):
+    resp = client.get("/health")
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "ok"
+
+
+# ── GET /users — camelCase response shape ─────────────────────────────────────
+
+def test_get_user_includes_date_fields(client, session):
+    make_user(session)
+    resp = client.get("/users/alice", headers=auth_headers())
+    body = resp.json()
+    assert "dateCreated" in body
+    assert "lastLogin" in body
 
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
