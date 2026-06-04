@@ -17,6 +17,7 @@ describe('UserService', () => {
   let httpMock: HttpTestingController;
 
   beforeEach(() => {
+    TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       providers: [provideHttpClient(), provideHttpClientTesting()],
     });
@@ -33,14 +34,14 @@ describe('UserService', () => {
   describe('getAllUsers()', () => {
     it('should issue GET /users/50/1 with default args', () => {
       service.getAllUsers().subscribe();
-      const req = httpMock.expectOne('/users/50/1');
+      const req = httpMock.expectOne((r) => r.url.endsWith('/users/50/1'));
       expect(req.request.method).toBe('GET');
       req.flush([mockUser]);
     });
 
     it('should issue GET with provided limit and page', () => {
       service.getAllUsers(10, 2).subscribe();
-      const req = httpMock.expectOne('/users/10/2');
+      const req = httpMock.expectOne((r) => r.url.endsWith('/users/10/2'));
       expect(req.request.method).toBe('GET');
       req.flush([]);
     });
@@ -49,14 +50,14 @@ describe('UserService', () => {
   describe('getUserById()', () => {
     it('should issue GET /users/:id with numeric id', () => {
       service.getUserById(1).subscribe();
-      const req = httpMock.expectOne('/users/1');
+      const req = httpMock.expectOne((r) => r.url.endsWith('/users/1'));
       expect(req.request.method).toBe('GET');
       req.flush(mockUser);
     });
 
     it('should issue GET /users/:id with string id', () => {
       service.getUserById('alice').subscribe();
-      const req = httpMock.expectOne('/users/alice');
+      const req = httpMock.expectOne((r) => r.url.endsWith('/users/alice'));
       expect(req.request.method).toBe('GET');
       req.flush(mockUser);
     });

@@ -25,6 +25,7 @@ describe('MessageService', () => {
   let httpMock: HttpTestingController;
 
   beforeEach(() => {
+    TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       providers: [provideHttpClient(), provideHttpClientTesting()],
     });
@@ -42,7 +43,7 @@ describe('MessageService', () => {
     it('should GET /messages/inbox with recipientId, page=1, limit=10 by default', () => {
       service.getInbox(20).subscribe();
       const req = httpMock.expectOne(
-        (r) => r.url === '/messages/inbox' && r.params.get('recipientId') === '20'
+        (r) => r.url.endsWith('/messages/inbox') && r.params.get('recipientId') === '20'
       );
       expect(req.request.method).toBe('GET');
       expect(req.request.params.get('page')).toBe('1');
@@ -53,7 +54,7 @@ describe('MessageService', () => {
     it('should use provided page and limit', () => {
       service.getInbox(20, 2, 5).subscribe();
       const req = httpMock.expectOne(
-        (r) => r.url === '/messages/inbox' && r.params.get('page') === '2'
+        (r) => r.url.endsWith('/messages/inbox') && r.params.get('page') === '2'
       );
       expect(req.request.params.get('limit')).toBe('5');
       req.flush(mockInboxPage);
@@ -64,7 +65,7 @@ describe('MessageService', () => {
     it('should GET /messages/sent with senderId, page=1, limit=10 by default', () => {
       service.getSent(10).subscribe();
       const req = httpMock.expectOne(
-        (r) => r.url === '/messages/sent' && r.params.get('senderId') === '10'
+        (r) => r.url.endsWith('/messages/sent') && r.params.get('senderId') === '10'
       );
       expect(req.request.method).toBe('GET');
       expect(req.request.params.get('page')).toBe('1');
@@ -76,7 +77,7 @@ describe('MessageService', () => {
   describe('getMessageById()', () => {
     it('should GET /messages/:id', () => {
       service.getMessageById(1).subscribe();
-      const req = httpMock.expectOne('/messages/1');
+      const req = httpMock.expectOne((r) => r.url.endsWith('/messages/1'));
       expect(req.request.method).toBe('GET');
       req.flush(mockMessage);
     });
@@ -84,9 +85,9 @@ describe('MessageService', () => {
 
   describe('createMessage()', () => {
     it('should POST /messages/post with payload', () => {
-      const payload = { senderId: 10, recipientId: 20, subject: 'Hi', body: 'Hey' };
+      const payload = { clientMessageId: 'test-key-1', senderId: 10, recipientId: 20, subject: 'Hi', body: 'Hey' };
       service.createMessage(payload).subscribe();
-      const req = httpMock.expectOne('/messages/post');
+      const req = httpMock.expectOne((r) => r.url.endsWith('/messages/post'));
       expect(req.request.method).toBe('POST');
       expect(req.request.body).toEqual(payload);
       req.flush(mockMessage);
@@ -96,7 +97,7 @@ describe('MessageService', () => {
   describe('markAsRead()', () => {
     it('should POST /messages/read with payload', () => {
       service.markAsRead({ id: 1 }).subscribe();
-      const req = httpMock.expectOne('/messages/read');
+      const req = httpMock.expectOne((r) => r.url.endsWith('/messages/read'));
       expect(req.request.method).toBe('POST');
       expect(req.request.body).toEqual({ id: 1 });
       req.flush({ status: 'ok' });
@@ -106,7 +107,7 @@ describe('MessageService', () => {
   describe('archiveMessage()', () => {
     it('should POST /messages/delete with payload', () => {
       service.archiveMessage({ id: 1, deletedBy: 20 }).subscribe();
-      const req = httpMock.expectOne('/messages/delete');
+      const req = httpMock.expectOne((r) => r.url.endsWith('/messages/delete'));
       expect(req.request.method).toBe('POST');
       expect(req.request.body).toEqual({ id: 1, deletedBy: 20 });
       req.flush({ status: 'ok' });

@@ -2,8 +2,9 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.security import HTTPBearer
 from typing import List
+from sqlalchemy import or_
 from sqlmodel import Session, select
-from app.models.dbmodels import User, UserPublic
+from app.models.dbmodels import User, UserOut, UserPublic, UserUpdateRequest
 from app.models.newuser import NewUser
 from app.database import get_session
 from app.utilites.password import verify_token, generate_hashed_password
@@ -11,7 +12,21 @@ from app.utilites.password import verify_token, generate_hashed_password
 router = APIRouter(prefix="/users", tags=["users"])
 security = HTTPBearer()
 
-@router.get("/", response_model=List[UserPublic])
+
+def _user_out(user: User) -> UserOut:
+    return UserOut(
+        id=user.id,
+        username=user.username,
+        email=user.email,
+        first_name=user.first_name,
+        last_name=user.last_name,
+        device_address=user.device_address,
+        date_created=user.created_at,
+        last_login=user.last_seen,
+    )
+
+
+@router.get("/", response_model=List[UserOut])
 def get_all_users(
         session: Session = Depends(get_session),
         username: str = Depends(verify_token),
@@ -19,32 +34,50 @@ def get_all_users(
         limit: int = Query(default=100, le=100)
 ):
     users = session.exec(select(User).offset(offset).limit(limit)).all()
-    return users
+    return [_user_out(u) for u in users]
 
 
-@router.get("/{user_id}", response_model=UserPublic)
-def get_user(
-    user_id: int,
+@router.get("/{limit}/{page}", response_model=List[UserOut])
+def get_all_users_paginated(
+    limit: int,
+    page: int,
     session: Session = Depends(get_session),
     username: str = Depends(verify_token),
 ):
-    user = session.get(User, user_id)
+    offset = (page - 1) * limit
+    users = session.exec(select(User).offset(offset).limit(limit)).all()
+    return [_user_out(u) for u in users]
+
+
+@router.get("/{user_id}", response_model=UserOut)
+def get_user(
+    user_id: str,
+    session: Session = Depends(get_session),
+    username: str = Depends(verify_token),
+):
+    try:
+        uid = int(user_id)
+    except ValueError:
+        uid = None
+
+    user = session.exec(
+        select(User).where(or_(User.id == uid, User.username == user_id, User.email == user_id))
+    ).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    return user
+    return _user_out(user)
 
-@router.post("/register", response_model=User)
+
+@router.post("/register", response_model=UserOut, status_code=201)
 def create_user(
     user_data: NewUser,
     session: Session = Depends(get_session),
     username: str = Depends(verify_token),
 ):
-    # Check if username already exists
     if session.exec(select(User).where(User.username == user_data.username)).first():
         raise HTTPException(status_code=400, detail="Username already exists")
 
-    # Check if email already exists
     if session.exec(select(User).where(User.email == user_data.email)).first():
         raise HTTPException(status_code=400, detail="Email already exists")
 
@@ -55,10 +88,56 @@ def create_user(
         first_name=user_data.first_name,
         last_name=user_data.last_name,
         device_address=user_data.device_address,
-        created_at=datetime.now(timezone.utc)
+        created_at=datetime.now(timezone.utc),
     )
 
     session.add(new_user)
     session.commit()
     session.refresh(new_user)
-    return new_user
+    return _user_out(new_user)
+
+
+@router.post("/update", response_model=UserOut)
+def update_user(
+    payload: UserUpdateRequest,
+    session: Session = Depends(get_session),
+    username: str = Depends(verify_token),
+):
+    user = session.get(User, payload.id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    fields = payload.user_update
+    if fields.username is not None:
+        user.username = fields.username
+    if fields.email is not None:
+        user.email = fields.email
+    if fields.password is not None:
+        user.password_hash = generate_hashed_password(fields.password)
+    if fields.first_name is not None:
+        user.first_name = fields.first_name
+    if fields.last_name is not None:
+        user.last_name = fields.last_name
+    if fields.device_address is not None:
+        user.device_address = fields.device_address
+
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    return _user_out(user)
+
+
+@router.delete("/delete/{id}", response_model=UserOut)
+def delete_user(
+    id: int,
+    session: Session = Depends(get_session),
+    username: str = Depends(verify_token),
+):
+    user = session.get(User, id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    out = _user_out(user)
+    session.delete(user)
+    session.commit()
+    return out

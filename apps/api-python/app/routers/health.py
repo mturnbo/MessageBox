@@ -4,7 +4,7 @@ from app.database import get_session
 
 router = APIRouter(prefix="/health", tags=["health"])
 
-@router.get("/ping", status_code=status.HTTP_200_OK)
+@router.get("", status_code=status.HTTP_200_OK)
 def ping_db(session: Session = Depends(get_session)):
   try:
     session.exec(select(1))

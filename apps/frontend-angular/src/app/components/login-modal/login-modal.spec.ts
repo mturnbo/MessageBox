@@ -60,7 +60,7 @@ describe('LoginModalComponent', () => {
 
     it('onSubmit() should not call API when form is invalid', () => {
       component.onSubmit();
-      httpMock.expectNone('/auth');
+      httpMock.expectNone((r) => r.url.endsWith('/auth'));
       expect(component.loading).toBe(false);
     });
   });
@@ -73,7 +73,7 @@ describe('LoginModalComponent', () => {
       component.form.setValue({ username: 'alice', password: 'pass' });
       component.onSubmit();
 
-      httpMock.expectOne('/auth').flush({ username: 'alice', token: 'tok123' });
+      httpMock.expectOne((r) => r.url.endsWith('/auth')).flush({ username: 'alice', token: 'tok123' });
 
       expect(emitted).toBe(true);
       expect(component.loading).toBe(false);
@@ -87,7 +87,7 @@ describe('LoginModalComponent', () => {
       component.onSubmit();
 
       httpMock
-        .expectOne('/auth')
+        .expectOne((r) => r.url.endsWith('/auth'))
         .flush('Unauthorized', { status: 401, statusText: 'Unauthorized' });
 
       expect(component.errorMessage).toBe('Invalid username or password.');
@@ -99,7 +99,7 @@ describe('LoginModalComponent', () => {
       component.onSubmit();
 
       httpMock
-        .expectOne('/auth')
+        .expectOne((r) => r.url.endsWith('/auth'))
         .flush('Bad Request', { status: 400, statusText: 'Bad Request' });
 
       expect(component.errorMessage).toBe('Invalid username or password.');
@@ -110,7 +110,7 @@ describe('LoginModalComponent', () => {
       component.onSubmit();
 
       httpMock
-        .expectOne('/auth')
+        .expectOne((r) => r.url.endsWith('/auth'))
         .flush('Server Error', { status: 500, statusText: 'Internal Server Error' });
 
       expect(component.errorMessage).toBe('Unable to connect. Please try again.');
@@ -121,7 +121,7 @@ describe('LoginModalComponent', () => {
       component.onSubmit();
 
       httpMock
-        .expectOne('/auth')
+        .expectOne((r) => r.url.endsWith('/auth'))
         .flush('Unauthorized', { status: 401, statusText: 'Unauthorized' });
 
       expect(component.form.controls.password.value).toBeNull();

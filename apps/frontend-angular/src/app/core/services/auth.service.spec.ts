@@ -44,7 +44,7 @@ describe('AuthService', () => {
 
       service.login({ username: 'alice', password: 'pass' }).subscribe();
 
-      const req = httpMock.expectOne('/auth');
+      const req = httpMock.expectOne((r) => r.url.endsWith('/auth'));
       expect(req.request.method).toBe('POST');
       req.flush(mockResponse);
 
@@ -62,7 +62,7 @@ describe('AuthService', () => {
         error: (err) => (errorStatus = err.status),
       });
 
-      const req = httpMock.expectOne('/auth');
+      const req = httpMock.expectOne((r) => r.url.endsWith('/auth'));
       req.flush('Unauthorized', { status: 401, statusText: 'Unauthorized' });
 
       expect(errorStatus).toBe(401);

@@ -13,6 +13,9 @@ router.get('/:limit/:page', authMiddleware, UserController.getAllUsers );
 // GET user by id
 router.get('/:id', authMiddleware, UserController.getUser );
 
+// POST register new user
+router.post('/register', authMiddleware, UserController.createUser);
+
 // POST update user
 router.post('/update/', authMiddleware, UserController.updateUser);
 
