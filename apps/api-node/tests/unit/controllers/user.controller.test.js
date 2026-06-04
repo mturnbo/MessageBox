@@ -206,7 +206,8 @@ describe('UserController', () => {
         where: {
           [Op.or]: [
             { id: '1' },
-            { username: '1' }
+            { username: '1' },
+            { email: '1' },
           ]
         },
         attributes: defaultAttributes
@@ -227,7 +228,8 @@ describe('UserController', () => {
         where: {
           [Op.or]: [
             { id: 'testuser' },
-            { username: 'testuser' }
+            { username: 'testuser' },
+            { email: 'testuser' },
           ]
         },
         attributes: defaultAttributes
@@ -235,6 +237,38 @@ describe('UserController', () => {
 
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(mockUser);
+    });
+
+    it('should return a user by email', async () => {
+      req.params.id = 'test@test.com';
+
+      sandbox.stub(User, 'findOne').resolves(mockUser);
+
+      await UserController.getUser(req, res);
+
+      sandbox.assert.calledWith(User.findOne, {
+        where: {
+          [Op.or]: [
+            { id: 'test@test.com' },
+            { username: 'test@test.com' },
+            { email: 'test@test.com' },
+          ]
+        },
+        attributes: defaultAttributes
+      });
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(mockUser);
+    });
+
+    it('should return 404 when user not found', async () => {
+      req.params.id = 'nobody';
+      sandbox.stub(User, 'findOne').resolves(null);
+
+      await UserController.getUser(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith({ error: 'User not found' });
     });
   });
 
