@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, APIRouter
 from app.routers import auth, users, messages, health
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
@@ -24,10 +24,13 @@ app.add_middleware(
     allow_headers=["*"],     # Allow all headers
 )
 
-app.include_router(auth.router)
-app.include_router(users.router)
-app.include_router(messages.router)
-app.include_router(health.router)
+v1_router = APIRouter(prefix="/v1")
+v1_router.include_router(auth.router)
+v1_router.include_router(users.router)
+v1_router.include_router(messages.router)
+v1_router.include_router(health.router)
+
+app.include_router(v1_router)
 
 def main():
     import uvicorn

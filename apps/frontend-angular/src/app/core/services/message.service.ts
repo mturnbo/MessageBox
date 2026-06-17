@@ -13,7 +13,7 @@ import {
 
 @Injectable({ providedIn: 'root' })
 export class MessageService {
-  private baseUrl = `${environment.apiUrl}/messages`;
+  private baseUrl = `${environment.apiUrl}/v1/messages`;
 
   constructor(private http: HttpClient) {}
 

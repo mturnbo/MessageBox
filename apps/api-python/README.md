@@ -50,13 +50,13 @@ uv run pytest tests/ -v    # specific directory
 
 ## Authentication
 
-All routes except `POST /auth` and `GET /health` require a JWT Bearer token:
+All routes except `POST /v1/auth` and `GET /v1/health` require a JWT Bearer token:
 
 ```
 Authorization: Bearer <token>
 ```
 
-Obtain a token via `POST /auth`. The token payload contains `{ "sub": username }`.
+Obtain a token via `POST /v1/auth`. The token payload contains `{ "sub": username }`.
 
 ---
 
@@ -64,7 +64,7 @@ Obtain a token via `POST /auth`. The token payload contains `{ "sub": username }
 
 ### Auth
 
-#### `POST /auth`
+#### `POST /v1/auth`
 
 Login. Accepts username **or** email address in the `username` field.
 
@@ -84,7 +84,7 @@ Login. Accepts username **or** email address in the `username` field.
 
 All user endpoints require authentication.
 
-#### `GET /users/`
+#### `GET /v1/users/`
 
 Get all users.
 
@@ -95,7 +95,7 @@ Get all users.
 
 **Response `200`:** array of [user objects](#user-object)
 
-#### `GET /users/{limit}/{page}`
+#### `GET /v1/users/{limit}/{page}`
 
 Get users with page-based pagination.
 
@@ -106,14 +106,14 @@ Get users with page-based pagination.
 
 **Response `200`:** array of user objects
 
-#### `GET /users/{user_id}`
+#### `GET /v1/users/{user_id}`
 
 Get a single user by numeric ID, username, or email address.
 
 **Response `200`:** user object  
 **Response `404`:** user not found
 
-#### `POST /users/register`
+#### `POST /v1/users/register`
 
 Create a new user.
 
@@ -133,7 +133,7 @@ Create a new user.
 
 **Response `201`:** user object
 
-#### `POST /users/update`
+#### `POST /v1/users/update`
 
 Update one or more fields on an existing user.
 
@@ -152,7 +152,7 @@ Update one or more fields on an existing user.
 
 **Response `200`:** user object
 
-#### `DELETE /users/delete/{id}`
+#### `DELETE /v1/users/delete/{id}`
 
 Delete a user by numeric ID.
 
@@ -164,7 +164,7 @@ Delete a user by numeric ID.
 
 All message endpoints require authentication.
 
-#### `GET /messages/inbox`
+#### `GET /v1/messages/inbox`
 
 Get messages received by a user. Excludes soft-deleted messages.
 
@@ -176,7 +176,7 @@ Get messages received by a user. Excludes soft-deleted messages.
 
 **Response `200`:** [message list](#message-list-response)
 
-#### `GET /messages/sent`
+#### `GET /v1/messages/sent`
 
 Get messages sent by a user. Excludes soft-deleted messages.
 
@@ -188,14 +188,14 @@ Get messages sent by a user. Excludes soft-deleted messages.
 
 **Response `200`:** [message list](#message-list-response)
 
-#### `GET /messages/{id}`
+#### `GET /v1/messages/{id}`
 
 Get a single message by ID.
 
 **Response `200`:** message object  
 **Response `404`:** message not found
 
-#### `GET /messages/{id}/thread`
+#### `GET /v1/messages/{id}/thread`
 
 Get the conversation thread for a message.
 
@@ -209,7 +209,7 @@ Get the conversation thread for a message.
 
 If the message has no thread, `thread` is `null` and `messages` contains only the original message.
 
-#### `POST /messages/post`
+#### `POST /v1/messages/post`
 
 Create a new message. Supports idempotency via `clientMessageId` in the body or the `Idempotency-Key` request header.
 
@@ -231,7 +231,7 @@ Create a new message. Supports idempotency via `clientMessageId` in the body or 
 **Response `200`:** same message returned when request is an idempotency replay (`idempotencyReplayed: true`)  
 **Response `409`:** same `clientMessageId` used with a different payload
 
-#### `POST /messages/reply`
+#### `POST /v1/messages/reply`
 
 Reply to an existing message. Creates or joins a thread.
 
@@ -250,7 +250,7 @@ Reply to an existing message. Creates or joins a thread.
 
 **Response `201`:** [message post response](#message-post-response) with `threadId` populated
 
-#### `POST /messages/read`
+#### `POST /v1/messages/read`
 
 Mark a message as read.
 
@@ -263,7 +263,7 @@ Mark a message as read.
 
 **Response `200`:** `{ "status": "Message read successfully" }`
 
-#### `POST /messages/delete`
+#### `POST /v1/messages/delete`
 
 Soft-delete a message for one party. The message is hidden from that user's inbox/sent but is not removed from the database.
 
@@ -278,7 +278,7 @@ Soft-delete a message for one party. The message is hidden from that user's inbo
 
 ### Health
 
-#### `GET /health`
+#### `GET /v1/health`
 
 Check API and database status. No authentication required.
 

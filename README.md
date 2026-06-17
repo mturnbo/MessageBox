@@ -42,12 +42,12 @@ Both APIs expose identical endpoints:
 
 | Group    | Base Path    | Description                              |
 |----------|-------------|------------------------------------------|
-| Auth     | `/auth`     | Login, returns JWT token                 |
-| Users    | `/users`    | Create, read, update, delete users       |
-| Messages | `/messages` | Send, receive, reply, thread, soft-delete|
-| Health   | `/health`   | Database connectivity check              |
+| Auth     | `/v1/auth`     | Login, returns JWT token                 |
+| Users    | `/v1/users`    | Create, read, update, delete users       |
+| Messages | `/v1/messages` | Send, receive, reply, thread, soft-delete|
+| Health   | `/v1/health`   | Database connectivity check              |
 
-Authentication uses JWT Bearer tokens. All routes except `POST /auth` and `GET /health` require an `Authorization: Bearer <token>` header.
+Authentication uses JWT Bearer tokens. All routes except `POST /v1/auth` and `GET /v1/health` require an `Authorization: Bearer <token>` header.
 
 ## Database Schema
 

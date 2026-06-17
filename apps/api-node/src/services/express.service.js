@@ -43,10 +43,10 @@ const expressService = {
 
       // add routes
       server.use('/', indexRouter);
-      server.use('/auth', authRouter);
-      server.use('/users', usersRouter);
-      server.use('/messages', messagesRouter);
-      server.use('/health', healthRouter);
+      server.use('/v1/auth', authRouter);
+      server.use('/v1/users', usersRouter);
+      server.use('/v1/messages', messagesRouter);
+      server.use('/v1/health', healthRouter);
 
       // error handling middleware
       server.use(notFound);
