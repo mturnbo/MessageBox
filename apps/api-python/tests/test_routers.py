@@ -75,6 +75,15 @@ def test_auth_unknown_user(client, session):
     assert resp.status_code == 401
 
 
+def test_auth_with_email(client, session):
+    make_user(session, email="alice@example.com")
+    resp = client.post("/auth", json={"username": "alice@example.com", "password": "secret"})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["username"] == "alice"
+    assert "token" in body
+
+
 # ── GET /users/ ───────────────────────────────────────────────────────────────
 
 def test_get_all_users_returns_list(client, session):
