@@ -2,6 +2,7 @@
 import User from '#models/user.model.js';
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
+import { Op } from 'sequelize';
 import { BadRequestError, UnauthorizedError } from "#utils/ApiErrors.js";
 
 dotenv.config();
@@ -9,7 +10,9 @@ dotenv.config();
 const AuthenticationController = {
 
   authenticateUser: async (req, res, next) => {
-    const user = await User.findOne({ where: {username: req.body.username } });
+    const user = await User.findOne({
+      where: { [Op.or]: [{ username: req.body.username }, { email: req.body.username }] }
+    });
 
     if (!user) throw new BadRequestError();
 
