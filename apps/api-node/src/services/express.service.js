@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import path from 'path';
 import cookieParser from 'cookie-parser';
 import logger from 'morgan';
@@ -18,9 +19,10 @@ const __dirname = path.resolve();
 
 let server;
 
+const originPort = process.env.ORIGIN;
 const corsOptions = {
-  origin: '*',
-  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+  origin: originPort ? `http://localhost:${originPort}` : false,
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
   preflightContinue: true,
   optionsSuccessStatus: 204,
 };
@@ -32,6 +34,7 @@ const expressService = {
     try {
       // config server
       server = express();
+      server.use(helmet());
       server.use(logger('combined', { stream: accessLogStream }));
       server.use(express.json());
       server.use(express.urlencoded({ extended: false }));
