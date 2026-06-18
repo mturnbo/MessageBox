@@ -43,8 +43,10 @@ npm run test:coverage   # with coverage report
 | `DB_PASSWORD`         | —         | Database password                    |
 | `DB_DATABASE`         | —         | Database name                        |
 | `DB_CONNECT_TIMEOUT`  | `6000`    | Connection timeout (ms)              |
-| `JWT_SECRET`          | —         | Secret for signing JWT tokens        |
-| `JWT_EXPIRATION_TIME` | —         | Token lifetime (e.g. `1h`, `86400`)  |
+| `JWT_SECRET`                  | —       | Secret for signing JWT tokens                    |
+| `JWT_EXPIRATION_TIME`         | —       | Access token lifetime (e.g. `1h`, `86400`)       |
+| `JWT_REFRESH_EXPIRATION_TIME` | `7d`    | Refresh token lifetime (e.g. `7d`, `604800`)     |
+| `ORIGIN`                      | —       | Allowed CORS origin port (e.g. `4000`)           |
 
 ## Authentication
 
