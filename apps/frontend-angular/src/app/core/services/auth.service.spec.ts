@@ -9,6 +9,7 @@ import { AuthUser, LoginResponse } from '../../models/user.model';
 
 const TOKEN_KEY = 'mb_token';
 const USER_KEY = 'mb_user';
+const REFRESH_TOKEN_KEY = 'mb_refresh_token';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -40,7 +41,7 @@ describe('AuthService', () => {
 
   describe('login()', () => {
     it('should set currentUser signal and write to localStorage on success', () => {
-      const mockResponse: LoginResponse = { username: 'alice', token: 'tok123' };
+      const mockResponse: LoginResponse = { username: 'alice', token: 'tok123', refreshToken: 'ref456' };
 
       service.login({ username: 'alice', password: 'pass' }).subscribe();
 
@@ -48,10 +49,11 @@ describe('AuthService', () => {
       expect(req.request.method).toBe('POST');
       req.flush(mockResponse);
 
-      expect(service.currentUser()).toEqual({ username: 'alice', token: 'tok123' });
+      expect(service.currentUser()).toEqual({ username: 'alice', token: 'tok123', refreshToken: 'ref456' });
       expect(service.isLoggedIn()).toBe(true);
       expect(service.token()).toBe('tok123');
       expect(localStorage.getItem(TOKEN_KEY)).toBe('tok123');
+      expect(localStorage.getItem(REFRESH_TOKEN_KEY)).toBe('ref456');
       const stored: AuthUser = JSON.parse(localStorage.getItem(USER_KEY)!);
       expect(stored.username).toBe('alice');
     });
@@ -126,6 +128,38 @@ describe('AuthService', () => {
     it('should start with null user when localStorage is empty', () => {
       expect(service.isLoggedIn()).toBe(false);
       expect(service.currentUser()).toBeNull();
+    });
+  });
+
+  describe('refreshAccessToken()', () => {
+    it('should call /v1/auth/refresh and update stored token on success', () => {
+      localStorage.setItem(REFRESH_TOKEN_KEY, 'ref456');
+      localStorage.setItem(USER_KEY, JSON.stringify({ username: 'alice', token: 'old-tok' }));
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+      });
+      const freshService = TestBed.inject(AuthService);
+      const freshMock = TestBed.inject(HttpTestingController);
+
+      freshService.refreshAccessToken().subscribe();
+
+      const req = freshMock.expectOne((r) => r.url.endsWith('/v1/auth/refresh'));
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({ refreshToken: 'ref456' });
+      req.flush({ token: 'new-tok' });
+
+      expect(freshService.token()).toBe('new-tok');
+      expect(localStorage.getItem(TOKEN_KEY)).toBe('new-tok');
+
+      freshMock.verify();
+    });
+
+    it('should return an error observable when no refresh token is stored', () => {
+      let errorCaught = false;
+      service.refreshAccessToken().subscribe({ error: () => (errorCaught = true) });
+      expect(errorCaught).toBe(true);
     });
   });
 });

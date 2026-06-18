@@ -8,6 +8,7 @@ import Aura from '@primeuix/themes/aura';
 
 import { routes } from './app.routes';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
+import { refreshInterceptor } from './core/interceptors/refresh.interceptor';
 
 const SkyPreset = definePreset(Aura, {
   semantic: {
@@ -49,7 +50,7 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes, withRouterConfig({ onSameUrlNavigation: 'reload' })),
-    provideHttpClient(withInterceptors([authInterceptor])),
+    provideHttpClient(withInterceptors([authInterceptor, refreshInterceptor])),
     provideAnimationsAsync(),
     providePrimeNG({
       theme: {
