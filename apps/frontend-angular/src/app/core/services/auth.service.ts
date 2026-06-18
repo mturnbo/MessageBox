@@ -19,8 +19,8 @@ export class AuthService {
   constructor(private http: HttpClient, private router: Router) {}
 
   login(credentials: LoginRequest): Observable<LoginResponse> {
-    console.log('AuthService.login()', `${environment.apiUrl}/auth`);
-    return this.http.post<LoginResponse>(`${environment.apiUrl}/auth`, credentials).pipe(
+    console.log('AuthService.login()', `${environment.apiUrl}/v1/auth`);
+    return this.http.post<LoginResponse>(`${environment.apiUrl}/v1/auth`, credentials).pipe(
       tap((response) => {
         const authUser: AuthUser = { username: response.username, token: response.token };
         this._currentUser.set(authUser);
