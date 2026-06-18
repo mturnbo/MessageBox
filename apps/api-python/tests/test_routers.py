@@ -6,6 +6,7 @@ from sqlmodel.pool import StaticPool
 
 from app.main import app
 from app.database import get_session
+from app.limiter import limiter
 from app.models.dbmodels import User, Message
 from app.utilites.password import generate_hashed_password, create_access_token
 
@@ -27,6 +28,7 @@ def client_fixture(session):
     def override_get_session():
         yield session
 
+    limiter._storage.reset()
     app.dependency_overrides[get_session] = override_get_session
     yield TestClient(app)
     app.dependency_overrides.clear()
@@ -82,6 +84,22 @@ def test_auth_with_email(client, session):
     body = resp.json()
     assert body["username"] == "alice"
     assert "token" in body
+
+
+def test_auth_rate_limit_blocks_after_max_attempts(client, session):
+    limit = int(__import__("os").getenv("AUTH_RATE_LIMIT_MAX", "10"))
+    for i in range(limit):
+        resp = client.post("/v1/auth", json={"username": "nobody", "password": "wrong"})
+        assert resp.status_code != 429, f"request {i + 1} blocked too early"
+    resp = client.post("/v1/auth", json={"username": "nobody", "password": "wrong"})
+    assert resp.status_code == 429
+
+
+def test_auth_rate_limit_allows_valid_login_before_limit(client, session):
+    make_user(session)
+    resp = client.post("/v1/auth", json={"username": "alice", "password": "secret"})
+    assert resp.status_code == 200
+    assert "token" in resp.json()
 
 
 # ── GET /users/ ───────────────────────────────────────────────────────────────
