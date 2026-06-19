@@ -63,6 +63,7 @@ def test_auth_returns_token(client, session):
     body = resp.json()
     assert body["username"] == "alice"
     assert "token" in body
+    assert "refreshToken" in body
     assert body["token_type"] == "bearer"
 
 
@@ -100,6 +101,29 @@ def test_auth_rate_limit_allows_valid_login_before_limit(client, session):
     resp = client.post("/v1/auth", json={"username": "alice", "password": "secret"})
     assert resp.status_code == 200
     assert "token" in resp.json()
+
+
+def test_refresh_token_returns_new_access_token(client, session):
+    make_user(session)
+    login = client.post("/v1/auth", json={"username": "alice", "password": "secret"})
+    refresh_token = login.json()["refreshToken"]
+    resp = client.post("/v1/auth/refresh", json={"refreshToken": refresh_token})
+    assert resp.status_code == 200
+    assert "token" in resp.json()
+
+
+def test_refresh_token_rejects_invalid_token(client, session):
+    resp = client.post("/v1/auth/refresh", json={"refreshToken": "not.a.valid.token"})
+    assert resp.status_code == 401
+
+
+def test_refresh_token_rejects_access_token_as_refresh(client, session):
+    make_user(session)
+    login = client.post("/v1/auth", json={"username": "alice", "password": "secret"})
+    access_token = login.json()["token"]
+    resp = client.post("/v1/auth/refresh", json={"refreshToken": access_token})
+
+    assert resp.status_code == 401
 
 
 # ── GET /users/ ───────────────────────────────────────────────────────────────

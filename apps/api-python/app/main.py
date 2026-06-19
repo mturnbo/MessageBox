@@ -1,5 +1,5 @@
 from fastapi import FastAPI, APIRouter
-from app.routers import auth, users, messages, health
+from app.routers import auth, users, messages, health, refresh
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -33,6 +33,7 @@ app.add_middleware(
 
 v1_router = APIRouter(prefix="/v1")
 v1_router.include_router(auth.router)
+v1_router.include_router(refresh.router)
 v1_router.include_router(users.router)
 v1_router.include_router(messages.router)
 v1_router.include_router(health.router)

@@ -17,10 +17,12 @@ export interface LoginRequest {
 export interface LoginResponse {
   username: string;
   token: string;
+  refreshToken?: string;
 }
 
 export interface AuthUser {
   username: string;
   token: string;
+  refreshToken?: string;
   userId?: number;
 }

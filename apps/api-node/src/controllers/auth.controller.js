@@ -21,15 +21,19 @@ const AuthenticationController = {
     user.lastLogin = new Date().toISOString().replace(/T/, ' ').replace(/\..+/g, '')
     await user.save();
 
-    console.log('SETTING JWT Token expires in: ', process.env.JWT_EXPIRATION_TIME, 'seconds')
-
     const token = jwt.sign(
-      {username: user.username},
+      { username: user.username },
       process.env.JWT_SECRET,
-      {expiresIn: process.env.JWT_EXPIRATION_TIME}
+      { expiresIn: process.env.JWT_EXPIRATION_TIME }
     );
 
-    res.json({ username: user.username, token });
+    const refreshToken = jwt.sign(
+      { username: user.username, type: 'refresh' },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_REFRESH_EXPIRATION_TIME ?? '7d' }
+    );
+
+    res.json({ username: user.username, token, refreshToken });
   }
 }
 
