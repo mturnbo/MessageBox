@@ -44,7 +44,7 @@ describe('AuthenticationController', () => {
 
       sandbox.assert.calledWith(User.findOne, expectedWhere('alice'));
       expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ username: 'alice', token: expect.any(String) })
+        expect.objectContaining({ username: 'alice', token: expect.any(String), refreshToken: expect.any(String) })
       );
     });
 
@@ -62,7 +62,7 @@ describe('AuthenticationController', () => {
 
       sandbox.assert.calledWith(User.findOne, expectedWhere('alice@example.com'));
       expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ username: 'alice', token: expect.any(String) })
+        expect.objectContaining({ username: 'alice', token: expect.any(String), refreshToken: expect.any(String) })
       );
     });
 

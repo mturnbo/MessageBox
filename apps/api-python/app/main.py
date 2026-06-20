@@ -1,6 +1,10 @@
 from fastapi import FastAPI, APIRouter
-from app.routers import auth, users, messages, health
+from app.routers import auth, users, messages, health, refresh
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from app.limiter import limiter
 from dotenv import load_dotenv
 import os
 
@@ -16,6 +20,9 @@ if origin_port:
 
 app = FastAPI(title="MessageBox API")
 
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -26,6 +33,7 @@ app.add_middleware(
 
 v1_router = APIRouter(prefix="/v1")
 v1_router.include_router(auth.router)
+v1_router.include_router(refresh.router)
 v1_router.include_router(users.router)
 v1_router.include_router(messages.router)
 v1_router.include_router(health.router)

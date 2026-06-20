@@ -43,10 +43,11 @@ uv run pytest tests/ -v    # specific directory
 | `MYSQL_PASSWORD`       | Database password                                  |
 | `MYSQL_DATABASE`       | Database name                                      |
 | `MYSQL_CONNECT_TIMEOUT`| Connection timeout in ms (default `6000`)          |
-| `JWT_SECRET`           | Secret for signing JWT tokens                      |
-| `JWT_EXPIRATION_TIME`  | Token lifetime in seconds (default `86400`)        |
-| `PORT`                 | Port to listen on in production (default `3000`)   |
-| `ORIGIN`               | Allowed CORS origin port (default `4000`)          |
+| `JWT_SECRET`                   | Secret for signing JWT tokens                           |
+| `JWT_EXPIRATION_TIME`          | Access token lifetime in seconds (default `86400`)      |
+| `JWT_REFRESH_EXPIRATION_TIME`  | Refresh token lifetime in seconds (default `604800`)    |
+| `PORT`                         | Port to listen on in production (default `3000`)        |
+| `ORIGIN`                       | Allowed CORS origin port (default `4000`)               |
 
 ## Authentication
 
