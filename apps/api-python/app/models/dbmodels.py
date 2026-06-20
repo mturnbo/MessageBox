@@ -7,8 +7,8 @@ from sqlmodel import SQLModel, Field, Column
 from datetime import datetime, timezone
 
 class UserBase(SQLModel):
-    username: str
-    email: str
+    username: str = Field(unique=True, index=True)
+    email: str = Field(unique=True, index=True)
     first_name: str
     last_name: str
     device_address: str | None
@@ -54,8 +54,8 @@ class UserUpdateRequest(BaseModel):
 class Message(SQLModel, table=True):
     __tablename__ = "messages"
     id: int | None = Field(default=None, primary_key=True)
-    sender_id: int = Field(foreign_key="users.id")
-    recipient_id: int = Field(foreign_key="users.id")
+    sender_id: int = Field(foreign_key="users.id", index=True)
+    recipient_id: int = Field(foreign_key="users.id", index=True)
     subject: str | None = None
     body: str | None = None
     sent_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

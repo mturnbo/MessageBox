@@ -6,6 +6,7 @@ description = "FastAPI for MessageBox"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "alembic>=1.18.4",
     "annotated-doc==0.0.3",
     "annotated-types==0.7.0",
     "anyio==4.11.0",
