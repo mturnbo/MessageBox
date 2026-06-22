@@ -3,7 +3,52 @@ import sequelize from '#config/database.js';
 
 const router = Router();
 
-/* GET Default Health Ping */
+/**
+ * @swagger
+ * /health:
+ *   get:
+ *     summary: Health check
+ *     description: Pings the database and returns connection pool stats.
+ *     tags: [Health]
+ *     responses:
+ *       200:
+ *         description: Service is up
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: UP
+ *                 database:
+ *                   type: string
+ *                   example: Connected
+ *                 pool:
+ *                   type: object
+ *                   properties:
+ *                     size:
+ *                       type: integer
+ *                     available:
+ *                       type: integer
+ *                     waiting:
+ *                       type: integer
+ *       503:
+ *         description: Service is down
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: DOWN
+ *                 database:
+ *                   type: string
+ *                   example: Disconnected
+ *                 error:
+ *                   type: string
+ */
 router.get('/', async (req, res, next) => {
   try {
     // Ping the database

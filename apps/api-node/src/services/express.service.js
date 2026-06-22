@@ -4,6 +4,8 @@ import helmet from 'helmet';
 import path from 'path';
 import cookieParser from 'cookie-parser';
 import logger from 'morgan';
+import swaggerUi from 'swagger-ui-express';
+import swaggerSpec from '#config/swagger.js';
 
 import indexRouter from '#routes/index.routes.js';
 import authRouter from '#routes/auth.routes.js';
@@ -43,6 +45,10 @@ const expressService = {
 
       // add CORS
       server.use(cors(corsOptions));
+
+      // API docs
+      server.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+      server.get('/docs/spec.json', (req, res) => res.json(swaggerSpec));
 
       // add routes
       server.use('/', indexRouter);
