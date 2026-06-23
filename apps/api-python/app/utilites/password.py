@@ -7,7 +7,7 @@ from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 load_dotenv()
-JWT_SECRET = os.getenv("JWT_SECRET", "3306")
+JWT_SECRET = os.getenv("JWT_SECRET", "")
 ALGORITHM = "HS256"
 
 security = HTTPBearer()

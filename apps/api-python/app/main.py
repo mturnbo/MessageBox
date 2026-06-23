@@ -1,3 +1,12 @@
+import os
+import sys
+from dotenv import load_dotenv
+
+load_dotenv()
+
+from app.config import validate_env
+validate_env()
+
 from fastapi import FastAPI, APIRouter
 from app.routers import auth, users, messages, health, refresh
 from fastapi.middleware.cors import CORSMiddleware
@@ -5,10 +14,6 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from app.limiter import limiter
-from dotenv import load_dotenv
-import os
-
-load_dotenv()
 
 origins = [
     "http://localhost",
@@ -26,9 +31,9 @@ app.add_middleware(SlowAPIMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_credentials=True,  # Allow cookies to be sent with cross-origin requests
-    allow_methods=["*"],     # Allow all HTTP methods (GET, POST, PUT, DELETE, etc.)
-    allow_headers=["*"],     # Allow all headers
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 v1_router = APIRouter(prefix="/v1")
