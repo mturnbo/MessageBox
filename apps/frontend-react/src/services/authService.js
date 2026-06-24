@@ -41,6 +41,17 @@ export function storeSession(loginResponse) {
   return user;
 }
 
+export function updateUserId(userId) {
+  const raw = localStorage.getItem(USER_KEY);
+  if (!raw) return;
+  try {
+    const user = JSON.parse(raw);
+    localStorage.setItem(USER_KEY, JSON.stringify({ ...user, userId }));
+  } catch {
+    // ignore corrupt stored user
+  }
+}
+
 export function updateToken(newToken) {
   localStorage.setItem(TOKEN_KEY, newToken);
   const raw = localStorage.getItem(USER_KEY);

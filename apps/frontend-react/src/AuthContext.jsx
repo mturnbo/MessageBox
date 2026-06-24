@@ -12,8 +12,20 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (credentials) => {
     const response = await authService.login(credentials);
+    // Store token first so apiFetch can immediately use it for the user lookup
     const stored = authService.storeSession(response);
     setUser(stored);
+
+    // Resolve the numeric userId in the background — required for inbox/sent queries
+    api.apiFetch(`/v1/users/${response.username}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((userData) => {
+        if (!userData?.id) return;
+        authService.updateUserId(userData.id);
+        setUser((prev) => (prev ? { ...prev, userId: userData.id } : null));
+      })
+      .catch(() => { /* userId remains null; non-critical */ });
+
     return stored;
   };
 
@@ -29,7 +41,6 @@ export const AuthProvider = ({ children }) => {
     return response.token;
   };
 
-  // Wire the API layer so apiFetch can refresh tokens and trigger logout
   useEffect(() => {
     api.init({
       onTokenRefreshed: refreshAccessToken,
