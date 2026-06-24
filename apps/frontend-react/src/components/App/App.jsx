@@ -1,24 +1,37 @@
-import { AuthProvider } from "../../AuthContext.jsx";
-import './App.css';
-import { Routes, Route } from 'react-router-dom';
-import Home from '../../pages/Home/Home.jsx';
-import Login from '../../pages/Login/Login.jsx';
-import Header from "../Header/Header.jsx";
-import User from '../../pages/Users/User.jsx';
+import { Navigate, Route, Routes } from 'react-router-dom';
+import { AuthProvider, useAuth } from '../../AuthContext.jsx';
+import { NotificationProvider } from '../../context/NotificationContext.jsx';
+import Header from '../Header/Header.jsx';
+import LoginModal from '../LoginModal/LoginModal.jsx';
+import ProtectedRoute from '../ProtectedRoute/ProtectedRoute.jsx';
+import Inbox from '../../pages/Inbox/Inbox.jsx';
+import SentMessages from '../../pages/SentMessages/SentMessages.jsx';
+
+function AppShell() {
+  const { isLoggedIn } = useAuth();
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {!isLoggedIn && <LoginModal />}
+      {isLoggedIn && <Header />}
+      <Routes>
+        <Route path="/" element={<Navigate to="/inbox" replace />} />
+        <Route path="/inbox" element={<ProtectedRoute><Inbox /></ProtectedRoute>} />
+        <Route path="/sent" element={<ProtectedRoute><SentMessages /></ProtectedRoute>} />
+        <Route path="*" element={<Navigate to="/inbox" replace />} />
+      </Routes>
+    </div>
+  );
+}
 
 function App() {
   return (
     <AuthProvider>
-      <div className="App">
-        <Header />
-        <Routes>
-          <Route path="/home" element={<Home />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/user/:id" element={<User />} />
-        </Routes>
-      </div>
+      <NotificationProvider>
+        <AppShell />
+      </NotificationProvider>
     </AuthProvider>
-  )
+  );
 }
 
-export default App
+export default App;
