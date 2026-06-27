@@ -1,8 +1,11 @@
 import { Router } from 'express';
 import UserController from '#controllers/user.controller.js';
 import { authMiddleware } from "#middlewares/auth.middleware.js";
+import apiRateLimiter from '#middlewares/apiRateLimit.js';
 
 const router = Router();
+
+router.use(apiRateLimiter);
 
 /**
  * @swagger
@@ -19,6 +22,7 @@ const router = Router();
  *         schema:
  *           type: integer
  *           default: 10
+ *           maximum: 100
  *       - in: query
  *         name: page
  *         schema:
@@ -35,6 +39,8 @@ const router = Router();
  *                 $ref: '#/components/schemas/User'
  *       401:
  *         $ref: '#/components/responses/Unauthorized'
+ *       429:
+ *         description: Rate limit exceeded
  */
 router.get('/', authMiddleware, UserController.getAllUsers);
 
@@ -52,6 +58,7 @@ router.get('/', authMiddleware, UserController.getAllUsers);
  *         required: true
  *         schema:
  *           type: integer
+ *           maximum: 100
  *       - in: path
  *         name: page
  *         required: true
@@ -68,6 +75,8 @@ router.get('/', authMiddleware, UserController.getAllUsers);
  *                 $ref: '#/components/schemas/User'
  *       401:
  *         $ref: '#/components/responses/Unauthorized'
+ *       429:
+ *         description: Rate limit exceeded
  */
 router.get('/:limit/:page', authMiddleware, UserController.getAllUsers);
 
@@ -97,6 +106,8 @@ router.get('/:limit/:page', authMiddleware, UserController.getAllUsers);
  *         $ref: '#/components/responses/Unauthorized'
  *       404:
  *         $ref: '#/components/responses/NotFound'
+ *       429:
+ *         description: Rate limit exceeded
  */
 router.get('/:id', authMiddleware, UserController.getUser);
 
@@ -125,6 +136,8 @@ router.get('/:id', authMiddleware, UserController.getUser);
  *         $ref: '#/components/responses/BadRequest'
  *       401:
  *         $ref: '#/components/responses/Unauthorized'
+ *       429:
+ *         description: Rate limit exceeded
  */
 router.post('/register', authMiddleware, UserController.createUser);
 
@@ -156,6 +169,8 @@ router.post('/register', authMiddleware, UserController.createUser);
  *         $ref: '#/components/responses/Unauthorized'
  *       404:
  *         $ref: '#/components/responses/NotFound'
+ *       429:
+ *         description: Rate limit exceeded
  */
 router.post('/update/', authMiddleware, UserController.updateUser);
 
@@ -180,6 +195,8 @@ router.post('/update/', authMiddleware, UserController.updateUser);
  *         $ref: '#/components/responses/Unauthorized'
  *       404:
  *         $ref: '#/components/responses/NotFound'
+ *       429:
+ *         description: Rate limit exceeded
  */
 router.delete('/delete/:id', authMiddleware, UserController.deleteUser);
 
