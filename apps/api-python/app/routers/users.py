@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
 from fastapi.security import HTTPBearer
 from typing import List
 from sqlalchemy import or_
@@ -8,9 +8,12 @@ from app.models.dbmodels import User, UserOut, UserPublic, UserUpdateRequest
 from app.models.newuser import NewUser
 from app.database import get_session
 from app.utilites.password import verify_token, generate_hashed_password
+from app.limiter import limiter, API_RATE_LIMIT
 
 router = APIRouter(prefix="/users", tags=["users"])
 security = HTTPBearer()
+
+MAX_LIMIT = 100
 
 
 def _user_out(user: User) -> UserOut:
@@ -27,20 +30,24 @@ def _user_out(user: User) -> UserOut:
 
 
 @router.get("/", response_model=List[UserOut])
+@limiter.limit(API_RATE_LIMIT)
 def get_all_users(
+        request: Request,
         session: Session = Depends(get_session),
         username: str = Depends(verify_token),
         offset: int = 0,
-        limit: int = Query(default=100, le=100)
+        limit: int = Query(default=100, le=MAX_LIMIT)
 ):
     users = session.exec(select(User).offset(offset).limit(limit)).all()
     return [_user_out(u) for u in users]
 
 
 @router.get("/{limit}/{page}", response_model=List[UserOut])
+@limiter.limit(API_RATE_LIMIT)
 def get_all_users_paginated(
-    limit: int,
-    page: int,
+    request: Request,
+    limit: int = Path(ge=1, le=MAX_LIMIT),
+    page: int = Path(ge=1),
     session: Session = Depends(get_session),
     username: str = Depends(verify_token),
 ):
@@ -50,7 +57,9 @@ def get_all_users_paginated(
 
 
 @router.get("/{user_id}", response_model=UserOut)
+@limiter.limit(API_RATE_LIMIT)
 def get_user(
+    request: Request,
     user_id: str,
     session: Session = Depends(get_session),
     username: str = Depends(verify_token),
@@ -70,7 +79,9 @@ def get_user(
 
 
 @router.post("/register", response_model=UserOut, status_code=201)
+@limiter.limit(API_RATE_LIMIT)
 def create_user(
+    request: Request,
     user_data: NewUser,
     session: Session = Depends(get_session),
     username: str = Depends(verify_token),
@@ -98,7 +109,9 @@ def create_user(
 
 
 @router.post("/update", response_model=UserOut)
+@limiter.limit(API_RATE_LIMIT)
 def update_user(
+    request: Request,
     payload: UserUpdateRequest,
     session: Session = Depends(get_session),
     username: str = Depends(verify_token),
@@ -128,7 +141,9 @@ def update_user(
 
 
 @router.delete("/delete/{id}", response_model=UserOut)
+@limiter.limit(API_RATE_LIMIT)
 def delete_user(
+    request: Request,
     id: int,
     session: Session = Depends(get_session),
     username: str = Depends(verify_token),

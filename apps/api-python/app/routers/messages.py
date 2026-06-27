@@ -12,14 +12,20 @@ from app.models.dbmodels import (
 from app.database import get_session
 from app.utilites.password import verify_token
 from app.services import message_service
+from app.limiter import limiter, API_RATE_LIMIT
 
 router = APIRouter(prefix="/messages", tags=["messages"])
 
+MAX_LIMIT = 100
+DEFAULT_LIMIT = 10
+
 
 @router.get("/inbox", response_model=MessageListResponse)
+@limiter.limit(API_RATE_LIMIT)
 def get_inbox(
+    request: Request,
     recipient_id: int = Query(..., alias="recipientId"),
-    limit: int = Query(default=10),
+    limit: int = Query(default=DEFAULT_LIMIT, ge=1, le=MAX_LIMIT),
     page: int = Query(default=1, ge=1),
     session: Session = Depends(get_session),
     username: str = Depends(verify_token),
@@ -28,9 +34,11 @@ def get_inbox(
 
 
 @router.get("/sent", response_model=MessageListResponse)
+@limiter.limit(API_RATE_LIMIT)
 def get_sent(
+    request: Request,
     sender_id: int = Query(..., alias="senderId"),
-    limit: int = Query(default=10),
+    limit: int = Query(default=DEFAULT_LIMIT, ge=1, le=MAX_LIMIT),
     page: int = Query(default=1, ge=1),
     session: Session = Depends(get_session),
     username: str = Depends(verify_token),
@@ -39,7 +47,9 @@ def get_sent(
 
 
 @router.get("/{id}/thread")
+@limiter.limit(API_RATE_LIMIT)
 def get_thread(
+    request: Request,
     id: int,
     session: Session = Depends(get_session),
     username: str = Depends(verify_token),
@@ -51,7 +61,9 @@ def get_thread(
 
 
 @router.get("/{id}", response_model=MessageOut)
+@limiter.limit(API_RATE_LIMIT)
 def get_message(
+    request: Request,
     id: int,
     session: Session = Depends(get_session),
     username: str = Depends(verify_token),
@@ -63,9 +75,10 @@ def get_message(
 
 
 @router.post("/post", response_model=MessagePostResponse, status_code=201)
+@limiter.limit(API_RATE_LIMIT)
 def create_message(
-    payload: CreateMessageRequest,
     request: Request,
+    payload: CreateMessageRequest,
     response: Response,
     session: Session = Depends(get_session),
     username: str = Depends(verify_token),
@@ -80,9 +93,10 @@ def create_message(
 
 
 @router.post("/reply", response_model=MessagePostResponse, status_code=201)
+@limiter.limit(API_RATE_LIMIT)
 def reply_to_message(
-    payload: ReplyToMessageRequest,
     request: Request,
+    payload: ReplyToMessageRequest,
     response: Response,
     session: Session = Depends(get_session),
     username: str = Depends(verify_token),
@@ -104,7 +118,9 @@ def reply_to_message(
 
 
 @router.post("/read")
+@limiter.limit(API_RATE_LIMIT)
 def read_message(
+    request: Request,
     payload: ReadMessageRequest,
     session: Session = Depends(get_session),
     username: str = Depends(verify_token),
@@ -116,7 +132,9 @@ def read_message(
 
 
 @router.post("/delete")
+@limiter.limit(API_RATE_LIMIT)
 def delete_message(
+    request: Request,
     payload: DeleteMessageRequest,
     session: Session = Depends(get_session),
     username: str = Depends(verify_token),
