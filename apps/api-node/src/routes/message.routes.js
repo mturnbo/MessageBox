@@ -2,6 +2,7 @@ import { Router } from 'express';
 import MessageController from '#controllers/message.controller.js';
 import { authMiddleware } from "#middlewares/auth.middleware.js";
 import apiRateLimiter from '#middlewares/apiRateLimit.js';
+import { requireOwnership } from '#middlewares/ownership.middleware.js';
 
 const router = Router();
 
@@ -46,7 +47,7 @@ router.use(apiRateLimiter);
  *       429:
  *         description: Rate limit exceeded
  */
-router.get('/inbox', authMiddleware, MessageController.getInbox);
+router.get('/inbox', authMiddleware, requireOwnership((req) => req.query.recipientId), MessageController.getInbox);
 
 /**
  * @swagger
@@ -87,7 +88,7 @@ router.get('/inbox', authMiddleware, MessageController.getInbox);
  *       429:
  *         description: Rate limit exceeded
  */
-router.get('/sent', authMiddleware, MessageController.getSent);
+router.get('/sent', authMiddleware, requireOwnership((req) => req.query.senderId), MessageController.getSent);
 
 /**
  * @swagger
@@ -195,7 +196,7 @@ router.get('/:id', authMiddleware, MessageController.getMessageById);
  *       429:
  *         description: Rate limit exceeded
  */
-router.post('/post', authMiddleware, MessageController.createMessage);
+router.post('/post', authMiddleware, requireOwnership((req) => req.body.senderId), MessageController.createMessage);
 
 /**
  * @swagger
@@ -226,7 +227,7 @@ router.post('/post', authMiddleware, MessageController.createMessage);
  *       429:
  *         description: Rate limit exceeded
  */
-router.post('/reply', authMiddleware, MessageController.replyToMessage);
+router.post('/reply', authMiddleware, requireOwnership((req) => req.body.senderId), MessageController.replyToMessage);
 
 /**
  * @swagger
@@ -307,6 +308,6 @@ router.post('/read', authMiddleware, MessageController.readMessage);
  *       429:
  *         description: Rate limit exceeded
  */
-router.post('/delete', authMiddleware, MessageController.deleteMessage);
+router.post('/delete', authMiddleware, requireOwnership((req) => req.body.deletedBy), MessageController.deleteMessage);
 
 export default router;
