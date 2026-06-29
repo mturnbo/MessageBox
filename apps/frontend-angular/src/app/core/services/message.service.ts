@@ -8,6 +8,7 @@ import {
   InboxPage,
   Message,
   ReadMessageRequest,
+  ReplyRequest,
   SentPage,
 } from '../../models/message.model';
 
@@ -41,6 +42,10 @@ export class MessageService {
 
   createMessage(payload: CreateMessageRequest): Observable<Message> {
     return this.http.post<Message>(`${this.baseUrl}/post`, payload);
+  }
+
+  replyToMessage(payload: ReplyRequest): Observable<Message> {
+    return this.http.post<Message>(`${this.baseUrl}/reply`, payload);
   }
 
   markAsRead(payload: ReadMessageRequest): Observable<{ status: string }> {

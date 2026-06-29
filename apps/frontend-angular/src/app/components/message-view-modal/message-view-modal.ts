@@ -17,8 +17,15 @@ export class MessageViewModalComponent {
   @Input() visible = false;
   @Input() message: Message | null = null;
   @Output() close = new EventEmitter<void>();
+  @Output() reply = new EventEmitter<Message>();
 
   onClose(): void {
     this.close.emit();
+  }
+
+  onReply(): void {
+    if (this.message) {
+      this.reply.emit(this.message);
+    }
   }
 }

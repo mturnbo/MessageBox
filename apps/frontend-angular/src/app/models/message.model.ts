@@ -24,6 +24,15 @@ export interface CreateMessageRequest {
   senderAddress?: string;
 }
 
+export interface ReplyRequest {
+  clientMessageId: string;
+  replyToId: number;
+  senderId: number;
+  recipientId: number;
+  subject?: string;
+  body?: string;
+}
+
 export interface ReadMessageRequest {
   id: number;
   readerAddress?: string;

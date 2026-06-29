@@ -99,5 +99,13 @@
 <app-message-view-modal
   [visible]="showMessageView()"
   [message]="selectedMessage()"
-  (close)="onMessageViewClose()">
+  (close)="onMessageViewClose()"
+  (reply)="onReply($event)">
 </app-message-view-modal>
+
+<app-compose-modal
+  [visible]="showReply()"
+  [replyTo]="replyingTo()"
+  (close)="onReplyClose()"
+  (sent)="onReplySent()">
+</app-compose-modal>
