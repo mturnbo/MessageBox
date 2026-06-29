@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import jwt
 from dotenv import load_dotenv
 import os
@@ -25,7 +25,7 @@ def compare_password(password, hashed_password):
 def create_access_token(data: dict):
     to_encode = data.copy()
     exp_seconds = int(os.getenv('JWT_EXPIRATION_TIME', '86400'))
-    expire = datetime.utcnow() + timedelta(seconds=exp_seconds)
+    expire = datetime.now(timezone.utc) + timedelta(seconds=exp_seconds)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, JWT_SECRET, algorithm=ALGORITHM)
 
