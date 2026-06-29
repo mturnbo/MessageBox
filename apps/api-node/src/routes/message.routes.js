@@ -1,8 +1,11 @@
 import { Router } from 'express';
 import MessageController from '#controllers/message.controller.js';
 import { authMiddleware } from "#middlewares/auth.middleware.js";
+import apiRateLimiter from '#middlewares/apiRateLimit.js';
 
 const router = Router();
+
+router.use(apiRateLimiter);
 
 /**
  * @swagger
@@ -23,6 +26,7 @@ const router = Router();
  *         schema:
  *           type: integer
  *           default: 10
+ *           maximum: 100
  *       - in: query
  *         name: page
  *         schema:
@@ -39,6 +43,8 @@ const router = Router();
  *         $ref: '#/components/responses/BadRequest'
  *       401:
  *         $ref: '#/components/responses/Unauthorized'
+ *       429:
+ *         description: Rate limit exceeded
  */
 router.get('/inbox', authMiddleware, MessageController.getInbox);
 
@@ -61,6 +67,7 @@ router.get('/inbox', authMiddleware, MessageController.getInbox);
  *         schema:
  *           type: integer
  *           default: 10
+ *           maximum: 100
  *       - in: query
  *         name: page
  *         schema:
@@ -77,6 +84,8 @@ router.get('/inbox', authMiddleware, MessageController.getInbox);
  *         $ref: '#/components/responses/BadRequest'
  *       401:
  *         $ref: '#/components/responses/Unauthorized'
+ *       429:
+ *         description: Rate limit exceeded
  */
 router.get('/sent', authMiddleware, MessageController.getSent);
 
@@ -113,6 +122,8 @@ router.get('/sent', authMiddleware, MessageController.getSent);
  *         $ref: '#/components/responses/Unauthorized'
  *       404:
  *         $ref: '#/components/responses/NotFound'
+ *       429:
+ *         description: Rate limit exceeded
  */
 router.get('/:id/thread', authMiddleware, MessageController.getThreadByMessageId);
 
@@ -141,6 +152,8 @@ router.get('/:id/thread', authMiddleware, MessageController.getThreadByMessageId
  *         $ref: '#/components/responses/Unauthorized'
  *       404:
  *         $ref: '#/components/responses/NotFound'
+ *       429:
+ *         description: Rate limit exceeded
  */
 router.get('/:id', authMiddleware, MessageController.getMessageById);
 
@@ -179,6 +192,8 @@ router.get('/:id', authMiddleware, MessageController.getMessageById);
  *         $ref: '#/components/responses/BadRequest'
  *       401:
  *         $ref: '#/components/responses/Unauthorized'
+ *       429:
+ *         description: Rate limit exceeded
  */
 router.post('/post', authMiddleware, MessageController.createMessage);
 
@@ -208,6 +223,8 @@ router.post('/post', authMiddleware, MessageController.createMessage);
  *         $ref: '#/components/responses/BadRequest'
  *       401:
  *         $ref: '#/components/responses/Unauthorized'
+ *       429:
+ *         description: Rate limit exceeded
  */
 router.post('/reply', authMiddleware, MessageController.replyToMessage);
 
@@ -245,6 +262,8 @@ router.post('/reply', authMiddleware, MessageController.replyToMessage);
  *         $ref: '#/components/responses/Unauthorized'
  *       404:
  *         $ref: '#/components/responses/NotFound'
+ *       429:
+ *         description: Rate limit exceeded
  */
 router.post('/read', authMiddleware, MessageController.readMessage);
 
@@ -285,6 +304,8 @@ router.post('/read', authMiddleware, MessageController.readMessage);
  *         $ref: '#/components/responses/Unauthorized'
  *       404:
  *         $ref: '#/components/responses/NotFound'
+ *       429:
+ *         description: Rate limit exceeded
  */
 router.post('/delete', authMiddleware, MessageController.deleteMessage);
 

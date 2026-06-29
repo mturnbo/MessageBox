@@ -11,4 +11,5 @@ export const STATUS = Object.freeze({
 
 export const QUERIES = Object.freeze({
   DEFAULT_LIMIT: 10,
+  MAX_LIMIT: 100,
 });

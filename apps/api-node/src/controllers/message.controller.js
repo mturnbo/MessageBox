@@ -112,7 +112,7 @@ const MessageController = {
 
   getSent: async (req, res) => {
     const senderId = parseInt(req.query.senderId);
-    const limit = parseInt(req.query.limit) || QUERIES.DEFAULT_LIMIT;
+    const limit = Math.min(parseInt(req.query.limit) || QUERIES.DEFAULT_LIMIT, QUERIES.MAX_LIMIT);
     const page = Math.max(parseInt(req.query.page) || 1, 1);
     const offset = (page - 1) * limit;
 
@@ -138,7 +138,7 @@ const MessageController = {
 
   getInbox: async (req, res) => {
     const recipientId = parseInt(req.query.recipientId);
-    const limit = parseInt(req.query.limit) || QUERIES.DEFAULT_LIMIT;
+    const limit = Math.min(parseInt(req.query.limit) || QUERIES.DEFAULT_LIMIT, QUERIES.MAX_LIMIT);
     const page = Math.max(parseInt(req.query.page) || 1, 1);
     const offset = (page - 1) * limit;
 

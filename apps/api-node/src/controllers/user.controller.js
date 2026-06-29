@@ -9,7 +9,7 @@ const defaultAttributes = ['id', 'username', 'email', 'firstName', 'lastName', '
 const UserController = {
   getAllUsers: async (req, res) => {
     try {
-      const limit = parseInt(req.params.limit) || QUERIES.DEFAULT_LIMIT;
+      const limit = Math.min(parseInt(req.params.limit) || QUERIES.DEFAULT_LIMIT, QUERIES.MAX_LIMIT);
       let page = parseInt(req.params.page) || 1;
       if (isNaN(page) || page < 1) page = 1;
       const offset = (page - 1) * limit;

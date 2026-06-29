@@ -58,7 +58,9 @@ router.post('/', authRateLimiter, AuthenticationController.authenticateUser);
  *         $ref: '#/components/responses/BadRequest'
  *       401:
  *         $ref: '#/components/responses/Unauthorized'
+ *       429:
+ *         description: Too many refresh attempts — rate limit exceeded
  */
-router.post('/refresh', RefreshController.refreshToken);
+router.post('/refresh', authRateLimiter, RefreshController.refreshToken);
 
 export default router;
