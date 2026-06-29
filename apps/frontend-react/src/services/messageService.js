@@ -36,6 +36,15 @@ export async function archiveMessage(id, deletedBy) {
   return res.json();
 }
 
+export async function replyToMessage(payload) {
+  const res = await apiFetch('/v1/messages/reply', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error('Failed to send reply');
+  return res.json();
+}
+
 export async function createMessage(payload) {
   const res = await apiFetch('/v1/messages/post', {
     method: 'POST',

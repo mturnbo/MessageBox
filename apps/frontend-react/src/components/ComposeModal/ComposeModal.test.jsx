@@ -158,3 +158,69 @@ describe('ComposeModal', () => {
     expect(onHide).toHaveBeenCalledOnce();
   });
 });
+
+const REPLY_TO = {
+  id: 5,
+  senderId: 10,
+  senderName: 'Bob Smith',
+  subject: 'Hello',
+  body: 'Hi there',
+  sentAt: new Date().toISOString(),
+  readAt: null,
+};
+
+function renderReplyModal() {
+  vi.spyOn(AuthContextModule, 'useAuth').mockReturnValue({ user: MOCK_USER });
+  vi.spyOn(NotificationContextModule, 'useNotifications').mockReturnValue({ showToast, setSentTotal });
+  vi.mocked(userService.getUsers).mockResolvedValue(MOCK_USERS);
+  return render(
+    <PrimeReactProvider>
+      <ComposeModal visible onHide={onHide} replyTo={REPLY_TO} />
+    </PrimeReactProvider>,
+  );
+}
+
+describe('ComposeModal — reply mode', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    showToast.mockReset();
+    setSentTotal.mockReset();
+    onHide.mockReset();
+  });
+
+  it('shows recipient name instead of autocomplete', () => {
+    renderReplyModal();
+    expect(screen.getByText('Bob Smith')).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText(/search by name/i)).not.toBeInTheDocument();
+  });
+
+  it('pre-fills subject with Re: prefix', () => {
+    renderReplyModal();
+    expect(screen.getByDisplayValue('Re: Hello')).toBeInTheDocument();
+  });
+
+  it('shows Reply as dialog title', () => {
+    renderReplyModal();
+    expect(screen.getByText('Reply')).toBeInTheDocument();
+  });
+
+  it('calls replyToMessage with correct replyToId and recipientId', async () => {
+    const user = userEvent.setup();
+    vi.mocked(messageService.replyToMessage).mockResolvedValue({ id: 99 });
+    renderReplyModal();
+
+    await user.type(screen.getByPlaceholderText(/write your message/i), 'My reply');
+    await user.click(screen.getByRole('button', { name: /send/i }));
+
+    await waitFor(() =>
+      expect(messageService.replyToMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          replyToId: 5,
+          senderId: 1,
+          recipientId: 10,
+          body: 'My reply',
+        }),
+      ),
+    );
+  });
+});

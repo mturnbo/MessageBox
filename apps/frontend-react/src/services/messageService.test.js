@@ -48,6 +48,18 @@ describe('archiveMessage', () => {
   });
 });
 
+describe('replyToMessage', () => {
+  it('POSTs to the reply endpoint with the full payload', async () => {
+    const payload = { replyToId: 3, senderId: 1, recipientId: 2, body: 'Reply', clientMessageId: 'xyz' };
+    const spy = mockFetch({ id: 20 });
+    await messageService.replyToMessage(payload);
+    expect(spy).toHaveBeenCalledWith('/v1/messages/reply', expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }));
+  });
+});
+
 describe('createMessage', () => {
   it('POSTs the message payload', async () => {
     const payload = { senderId: 1, recipientId: 2, body: 'Hello', clientMessageId: 'abc' };

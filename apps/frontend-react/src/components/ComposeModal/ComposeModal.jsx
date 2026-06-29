@@ -9,7 +9,7 @@ import { useNotifications } from '../../context/NotificationContext.jsx';
 import * as messageService from '../../services/messageService.js';
 import * as userService from '../../services/userService.js';
 
-const ComposeModal = ({ visible, onHide }) => {
+const ComposeModal = ({ visible, onHide, replyTo = null }) => {
   const { user } = useAuth();
   const { showToast, setSentTotal } = useNotifications();
   const [recipient, setRecipient] = useState(null);
@@ -20,20 +20,25 @@ const ComposeModal = ({ visible, onHide }) => {
   const [error, setError] = useState('');
   const allUsersRef = useRef([]);
 
-  // Load user list lazily on first open
+  // Sync fields when modal opens or replyTo changes
   useEffect(() => {
-    if (visible && allUsersRef.current.length === 0) {
-      userService
-        .getUsers(100)
-        .then((users) => {
-          allUsersRef.current = users.map((u) => ({
-            ...u,
-            displayName: `${u.firstName} ${u.lastName}`,
-          }));
-        })
-        .catch(() => {});
+    if (visible) {
+      setSubject(replyTo?.subject ? `Re: ${replyTo.subject}` : '');
+      setBody('');
+      setError('');
+      if (!replyTo && allUsersRef.current.length === 0) {
+        userService
+          .getUsers(100)
+          .then((users) => {
+            allUsersRef.current = users.map((u) => ({
+              ...u,
+              displayName: `${u.firstName} ${u.lastName}`,
+            }));
+          })
+          .catch(() => {});
+      }
     }
-  }, [visible]);
+  }, [visible, replyTo]);
 
   const resetForm = () => {
     setRecipient(null);
@@ -61,23 +66,42 @@ const ComposeModal = ({ visible, onHide }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!recipient?.id || !body.trim()) return;
+    if (!body.trim()) return;
+    if (!replyTo && !recipient?.id) return;
+
     setLoading(true);
     setError('');
     try {
-      await messageService.createMessage({
-        clientMessageId: crypto.randomUUID(),
-        senderId: user.userId,
-        recipientId: recipient.id,
-        subject: subject.trim() || undefined,
-        body: body.trim(),
-      });
-      showToast({
-        severity: 'success',
-        summary: 'Message sent',
-        detail: `To ${recipient.displayName}`,
-        life: 3000,
-      });
+      if (replyTo) {
+        await messageService.replyToMessage({
+          clientMessageId: crypto.randomUUID(),
+          replyToId: replyTo.id,
+          senderId: user.userId,
+          recipientId: replyTo.senderId,
+          subject: subject.trim() || undefined,
+          body: body.trim(),
+        });
+        showToast({
+          severity: 'success',
+          summary: 'Reply sent',
+          detail: `To ${replyTo.senderName ?? `User #${replyTo.senderId}`}`,
+          life: 3000,
+        });
+      } else {
+        await messageService.createMessage({
+          clientMessageId: crypto.randomUUID(),
+          senderId: user.userId,
+          recipientId: recipient.id,
+          subject: subject.trim() || undefined,
+          body: body.trim(),
+        });
+        showToast({
+          severity: 'success',
+          summary: 'Message sent',
+          detail: `To ${recipient.displayName}`,
+          life: 3000,
+        });
+      }
       setSentTotal((prev) => prev + 1);
       resetForm();
       onHide();
@@ -100,11 +124,11 @@ const ComposeModal = ({ visible, onHide }) => {
     </div>
   );
 
-  const canSubmit = !!recipient?.id && !!body.trim();
+  const canSubmit = replyTo ? !!body.trim() : !!recipient?.id && !!body.trim();
 
   return (
     <Dialog
-      header="New Message"
+      header={replyTo ? 'Reply' : 'New Message'}
       visible={visible}
       onHide={handleHide}
       modal
@@ -115,18 +139,29 @@ const ComposeModal = ({ visible, onHide }) => {
       <form onSubmit={handleSubmit} className="flex flex-col gap-4 pt-2">
         <div className="flex flex-col gap-1">
           <label className="text-sm font-medium text-gray-700">To</label>
-          <AutoComplete
-            value={recipient}
-            suggestions={suggestions}
-            completeMethod={handleSearch}
-            field="displayName"
-            itemTemplate={itemTemplate}
-            onChange={(e) => setRecipient(e.value)}
-            forceSelection
-            placeholder="Search by name, username, or email"
-            className="w-full"
-            inputClassName="w-full"
-          />
+          {replyTo ? (
+            <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-md border border-gray-200">
+              <div className="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-semibold flex-shrink-0">
+                {(replyTo.senderName?.[0] ?? '?').toUpperCase()}
+              </div>
+              <span className="text-sm text-gray-800">
+                {replyTo.senderName ?? `User #${replyTo.senderId}`}
+              </span>
+            </div>
+          ) : (
+            <AutoComplete
+              value={recipient}
+              suggestions={suggestions}
+              completeMethod={handleSearch}
+              field="displayName"
+              itemTemplate={itemTemplate}
+              onChange={(e) => setRecipient(e.value)}
+              forceSelection
+              placeholder="Search by name, username, or email"
+              className="w-full"
+              inputClassName="w-full"
+            />
+          )}
         </div>
 
         <div className="flex flex-col gap-1">
