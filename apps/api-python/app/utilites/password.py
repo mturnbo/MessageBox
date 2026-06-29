@@ -5,6 +5,9 @@ import os
 import bcrypt
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from sqlmodel import Session, select
+from app.database import get_session
+from app.models.dbmodels import User
 
 load_dotenv()
 JWT_SECRET = os.getenv("JWT_SECRET", "")
@@ -59,3 +62,13 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
 
     except jwt.PyJWTError:
         raise HTTPException(status_code=401, detail="Could not validate credentials")
+
+
+def get_current_user(
+    username: str = Depends(verify_token),
+    session: Session = Depends(get_session),
+) -> User:
+    user = session.exec(select(User).where(User.username == username)).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="Authenticated user not found")
+    return user

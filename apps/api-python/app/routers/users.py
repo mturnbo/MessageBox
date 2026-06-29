@@ -7,7 +7,7 @@ from sqlmodel import Session, select
 from app.models.dbmodels import User, UserOut, UserPublic, UserUpdateRequest
 from app.models.newuser import NewUser
 from app.database import get_session
-from app.utilites.password import verify_token, generate_hashed_password
+from app.utilites.password import verify_token, generate_hashed_password, get_current_user
 from app.limiter import limiter, API_RATE_LIMIT
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -114,8 +114,10 @@ def update_user(
     request: Request,
     payload: UserUpdateRequest,
     session: Session = Depends(get_session),
-    username: str = Depends(verify_token),
+    current_user: User = Depends(get_current_user),
 ):
+    if current_user.id != payload.id:
+        raise HTTPException(status_code=403, detail="Forbidden")
     user = session.get(User, payload.id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -146,8 +148,10 @@ def delete_user(
     request: Request,
     id: int,
     session: Session = Depends(get_session),
-    username: str = Depends(verify_token),
+    current_user: User = Depends(get_current_user),
 ):
+    if current_user.id != id:
+        raise HTTPException(status_code=403, detail="Forbidden")
     user = session.get(User, id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")

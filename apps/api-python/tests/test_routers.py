@@ -323,13 +323,16 @@ def test_update_user(client, session):
     assert resp.json()["firstName"] == "Bob"
 
 
-def test_update_user_not_found(client):
+def test_update_user_not_found(client, session):
+    # With ownership middleware, trying to update another user's id returns 403
+    # before the handler even looks up the target (ownership check fires first).
+    make_user(session)
     resp = client.post(
         "/v1/users/update",
         headers=auth_headers(),
         json={"id": 9999, "userUpdate": {"firstName": "X"}},
     )
-    assert resp.status_code == 404
+    assert resp.status_code == 403
 
 
 def test_update_user_requires_auth(client, session):
@@ -349,9 +352,11 @@ def test_delete_user(client, session):
     assert resp2.status_code == 404
 
 
-def test_delete_user_not_found(client):
+def test_delete_user_not_found(client, session):
+    # With ownership middleware, trying to delete another user's id returns 403.
+    make_user(session)
     resp = client.delete("/v1/users/delete/9999", headers=auth_headers())
-    assert resp.status_code == 404
+    assert resp.status_code == 403
 
 
 def test_delete_user_requires_auth(client, session):
@@ -438,14 +443,16 @@ def test_get_sent_messages(client, session, two_users):
 
 
 def test_get_sent_messages_empty(client, session, two_users):
-    resp = client.get("/v1/messages/sent?senderId=9999", headers=auth_headers())
+    alice, bob = two_users
+    resp = client.get(f"/v1/messages/sent?senderId={alice.id}", headers=auth_headers())
     assert resp.status_code == 200
     body = resp.json()
     assert body["messages"] == []
     assert body["total"] == 0
 
 
-def test_get_sent_missing_sender_id(client):
+def test_get_sent_missing_sender_id(client, session):
+    make_user(session)  # get_current_user needs the user to exist in the DB
     resp = client.get("/v1/messages/sent", headers=auth_headers())
     assert resp.status_code == 422
 
@@ -462,7 +469,7 @@ def test_get_inbox_messages(client, session, two_users):
     alice, bob = two_users
     make_message(session, alice.id, bob.id, subject="for bob")
     make_message(session, alice.id, alice.id, subject="for alice")
-    resp = client.get(f"/v1/messages/inbox?recipientId={bob.id}", headers=auth_headers())
+    resp = client.get(f"/v1/messages/inbox?recipientId={bob.id}", headers=auth_headers("bob"))
     assert resp.status_code == 200
     body = resp.json()
     assert body["total"] == 1
@@ -470,14 +477,16 @@ def test_get_inbox_messages(client, session, two_users):
 
 
 def test_get_inbox_messages_empty(client, session, two_users):
-    resp = client.get("/v1/messages/inbox?recipientId=9999", headers=auth_headers())
+    alice, bob = two_users
+    resp = client.get(f"/v1/messages/inbox?recipientId={alice.id}", headers=auth_headers())
     assert resp.status_code == 200
     body = resp.json()
     assert body["messages"] == []
     assert body["total"] == 0
 
 
-def test_get_inbox_missing_recipient_id(client):
+def test_get_inbox_missing_recipient_id(client, session):
+    make_user(session)  # get_current_user needs the user to exist in the DB
     resp = client.get("/v1/messages/inbox", headers=auth_headers())
     assert resp.status_code == 422
 
@@ -571,7 +580,7 @@ def test_reply_to_message(client, session, two_users):
     parent = make_message(session, alice.id, bob.id)
     resp = client.post(
         "/v1/messages/reply",
-        headers=auth_headers(),
+        headers=auth_headers("bob"),
         json={
             "reply_to_id": parent.id,
             "sender_id": bob.id,
@@ -588,14 +597,15 @@ def test_reply_to_message(client, session, two_users):
     assert body["idempotencyReplayed"] == False
 
 
-def test_reply_to_nonexistent_message(client):
+def test_reply_to_nonexistent_message(client, session):
+    alice = make_user(session)
     resp = client.post(
         "/v1/messages/reply",
         headers=auth_headers(),
         json={
             "reply_to_id": 9999,
-            "sender_id": 1,
-            "recipient_id": 2,
+            "sender_id": alice.id,
+            "recipient_id": alice.id,
             "body": "reply",
         },
     )
@@ -612,9 +622,9 @@ def test_reply_idempotency_replay(client, session, two_users):
         "body": "reply",
         "client_message_id": "reply-key-abc",
     }
-    resp1 = client.post("/v1/messages/reply", headers=auth_headers(), json=payload)
+    resp1 = client.post("/v1/messages/reply", headers=auth_headers("bob"), json=payload)
     assert resp1.status_code == 201
-    resp2 = client.post("/v1/messages/reply", headers=auth_headers(), json=payload)
+    resp2 = client.post("/v1/messages/reply", headers=auth_headers("bob"), json=payload)
     assert resp2.status_code == 200
     assert resp2.json()["idempotencyReplayed"] == True
 
@@ -636,7 +646,7 @@ def test_get_thread_by_message_id(client, session, two_users):
     parent = make_message(session, alice.id, bob.id)
     client.post(
         "/v1/messages/reply",
-        headers=auth_headers(),
+        headers=auth_headers("bob"),
         json={
             "reply_to_id": parent.id,
             "sender_id": bob.id,
@@ -723,18 +733,19 @@ def test_delete_message_by_recipient(client, session, two_users):
     msg = make_message(session, alice.id, bob.id)
     resp = client.post(
         "/v1/messages/delete",
-        headers=auth_headers(),
+        headers=auth_headers("bob"),
         json={"id": msg.id, "deleted_by": bob.id},
     )
     assert resp.status_code == 200
     assert "recipient" in resp.json()["status"]
 
 
-def test_delete_message_not_found(client):
+def test_delete_message_not_found(client, session):
+    alice = make_user(session)
     resp = client.post(
         "/v1/messages/delete",
         headers=auth_headers(),
-        json={"id": 9999, "deleted_by": 1},
+        json={"id": 9999, "deleted_by": alice.id},
     )
     assert resp.status_code == 404
 
@@ -767,10 +778,10 @@ def test_inbox_excludes_soft_deleted(client, session, two_users):
     msg = make_message(session, alice.id, bob.id)
     client.post(
         "/v1/messages/delete",
-        headers=auth_headers(),
+        headers=auth_headers("bob"),
         json={"id": msg.id, "deleted_by": bob.id},
     )
-    resp = client.get(f"/v1/messages/inbox?recipientId={bob.id}", headers=auth_headers())
+    resp = client.get(f"/v1/messages/inbox?recipientId={bob.id}", headers=auth_headers("bob"))
     assert resp.status_code == 200
     assert resp.json()["messages"] == []
     assert resp.json()["total"] == 0
@@ -784,6 +795,74 @@ def test_soft_delete_is_per_party(client, session, two_users):
         headers=auth_headers(),
         json={"id": msg.id, "deleted_by": alice.id},
     )
-    resp = client.get(f"/v1/messages/inbox?recipientId={bob.id}", headers=auth_headers())
+    resp = client.get(f"/v1/messages/inbox?recipientId={bob.id}", headers=auth_headers("bob"))
     assert resp.status_code == 200
     assert resp.json()["total"] == 1
+
+
+# ── Ownership enforcement (cross-user 403s) ───────────────────────────────────
+
+def test_cannot_read_other_users_inbox(client, session, two_users):
+    alice, bob = two_users
+    resp = client.get(
+        f"/v1/messages/inbox?recipientId={bob.id}",
+        headers=auth_headers("alice"),
+    )
+    assert resp.status_code == 403
+
+
+def test_cannot_read_other_users_sent(client, session, two_users):
+    alice, bob = two_users
+    resp = client.get(
+        f"/v1/messages/sent?senderId={bob.id}",
+        headers=auth_headers("alice"),
+    )
+    assert resp.status_code == 403
+
+
+def test_cannot_send_message_as_another_user(client, session, two_users):
+    alice, bob = two_users
+    resp = client.post(
+        "/v1/messages/post",
+        headers=auth_headers("alice"),
+        json={"sender_id": bob.id, "recipient_id": alice.id, "body": "impersonation"},
+    )
+    assert resp.status_code == 403
+
+
+def test_cannot_reply_as_another_user(client, session, two_users):
+    alice, bob = two_users
+    parent = make_message(session, alice.id, bob.id)
+    resp = client.post(
+        "/v1/messages/reply",
+        headers=auth_headers("alice"),
+        json={"reply_to_id": parent.id, "sender_id": bob.id, "recipient_id": alice.id, "body": "fake"},
+    )
+    assert resp.status_code == 403
+
+
+def test_cannot_delete_message_as_another_user(client, session, two_users):
+    alice, bob = two_users
+    msg = make_message(session, alice.id, bob.id)
+    resp = client.post(
+        "/v1/messages/delete",
+        headers=auth_headers("alice"),
+        json={"id": msg.id, "deleted_by": bob.id},
+    )
+    assert resp.status_code == 403
+
+
+def test_cannot_update_another_users_profile(client, session, two_users):
+    alice, bob = two_users
+    resp = client.post(
+        "/v1/users/update",
+        headers=auth_headers("alice"),
+        json={"id": bob.id, "userUpdate": {"firstName": "Hacked"}},
+    )
+    assert resp.status_code == 403
+
+
+def test_cannot_delete_another_user(client, session, two_users):
+    alice, bob = two_users
+    resp = client.delete(f"/v1/users/delete/{bob.id}", headers=auth_headers("alice"))
+    assert resp.status_code == 403
