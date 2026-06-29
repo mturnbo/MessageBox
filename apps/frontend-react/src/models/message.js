@@ -25,6 +25,16 @@
  */
 
 /**
+ * @typedef {Object} ReplyRequest
+ * @property {string} clientMessageId
+ * @property {number} replyToId
+ * @property {number} senderId
+ * @property {number} recipientId
+ * @property {string} [subject]
+ * @property {string} [body]
+ */
+
+/**
  * @typedef {Object} CreateMessageRequest
  * @property {string} clientMessageId
  * @property {number} senderId

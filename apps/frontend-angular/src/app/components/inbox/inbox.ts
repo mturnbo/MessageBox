@@ -18,6 +18,7 @@ import { NotificationService } from '../../core/services/notification.service';
 import { Message } from '../../models/message.model';
 import { User } from '../../models/user.model';
 import { MessageViewModalComponent } from '../message-view-modal/message-view-modal';
+import { ComposeModalComponent } from '../compose-modal/compose-modal';
 
 @Component({
   selector: 'app-inbox',
@@ -31,6 +32,7 @@ import { MessageViewModalComponent } from '../message-view-modal/message-view-mo
     DatePipe,
     Toast,
     MessageViewModalComponent,
+    ComposeModalComponent,
   ],
   providers: [PrimeMessageService],
   templateUrl: './inbox.html',
@@ -45,6 +47,8 @@ export class InboxComponent implements OnInit, OnDestroy {
 
   selectedMessage = signal<Message | null>(null);
   showMessageView = signal(false);
+  replyingTo = signal<Message | null>(null);
+  showReply = signal(false);
 
   private destroy$ = new Subject<void>();
   private userCache = new Map<number, User>();
@@ -190,6 +194,23 @@ export class InboxComponent implements OnInit, OnDestroy {
   onMessageViewClose(): void {
     this.showMessageView.set(false);
     this.selectedMessage.set(null);
+  }
+
+  onReply(message: Message): void {
+    this.showMessageView.set(false);
+    this.selectedMessage.set(null);
+    this.replyingTo.set(message);
+    this.showReply.set(true);
+  }
+
+  onReplyClose(): void {
+    this.showReply.set(false);
+    this.replyingTo.set(null);
+  }
+
+  onReplySent(): void {
+    this.onReplyClose();
+    this.loadMessages();
   }
 
   ngOnDestroy(): void {

@@ -11,8 +11,9 @@
 
   <ng-template #header>
     <div class="mb-compose-dialog__header">
-      <i class="pi pi-pencil mb-compose-dialog__icon"></i>
-      <h3 class="mb-compose-dialog__title">New Message</h3>
+      <i class="pi pi-reply mb-compose-dialog__icon" *ngIf="replyTo; else composeIcon"></i>
+      <ng-template #composeIcon><i class="pi pi-pencil mb-compose-dialog__icon"></i></ng-template>
+      <h3 class="mb-compose-dialog__title">{{ replyTo ? 'Reply' : 'New Message' }}</h3>
     </div>
   </ng-template>
 
@@ -22,30 +23,39 @@
     }
 
     <div class="mb-compose-form__field">
-      <label class="mb-compose-form__label" for="recipient">To</label>
-      <p-autocomplete
-        inputId="recipient"
-        formControlName="recipient"
-        [suggestions]="filteredUsers"
-        (completeMethod)="searchUsers($event)"
-        optionLabel="username"
-        placeholder="Search by name or username…"
-        [dropdown]="true"
-        styleClass="w-full"
-        appendTo="body">
-
-        <ng-template #item let-user>
-          <div class="mb-compose-form__user-option">
-            <div class="mb-compose-form__user-avatar">
-              {{ user.username.charAt(0).toUpperCase() }}
-            </div>
-            <div>
-              <div class="mb-compose-form__user-name">{{ getUserLabel(user) }}</div>
-              <div class="mb-compose-form__user-email">{{ user.email }}</div>
-            </div>
+      <label class="mb-compose-form__label">To</label>
+      @if (replyTo) {
+        <div class="mb-compose-form__reply-recipient">
+          <div class="mb-compose-form__user-avatar">
+            {{ (replyTo.senderName ?? 'U').charAt(0).toUpperCase() }}
           </div>
-        </ng-template>
-      </p-autocomplete>
+          <span>{{ replyTo.senderName ?? 'User #' + replyTo.senderId }}</span>
+        </div>
+      } @else {
+        <p-autocomplete
+          inputId="recipient"
+          formControlName="recipient"
+          [suggestions]="filteredUsers"
+          (completeMethod)="searchUsers($event)"
+          optionLabel="username"
+          placeholder="Search by name or username…"
+          [dropdown]="true"
+          styleClass="w-full"
+          appendTo="body">
+
+          <ng-template #item let-user>
+            <div class="mb-compose-form__user-option">
+              <div class="mb-compose-form__user-avatar">
+                {{ user.username.charAt(0).toUpperCase() }}
+              </div>
+              <div>
+                <div class="mb-compose-form__user-name">{{ getUserLabel(user) }}</div>
+                <div class="mb-compose-form__user-email">{{ user.email }}</div>
+              </div>
+            </div>
+          </ng-template>
+        </p-autocomplete>
+      }
     </div>
 
     <div class="mb-compose-form__field">
@@ -85,7 +95,7 @@
       label="Send"
       icon="pi pi-send"
       [loading]="loading"
-      [disabled]="form.invalid"
+      [disabled]="form.controls['body'].invalid"
       (onClick)="onSubmit()">
     </p-button>
   </ng-template>

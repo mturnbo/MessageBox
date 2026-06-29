@@ -11,7 +11,7 @@ const PAGE_SIZE = 10;
 
 const avatar = (name) => (name?.[0] ?? '?').toUpperCase();
 
-export default function SentMessages() {
+export default function SentMessages({ onStartReply }) {
   const { user } = useAuth();
   const { setSentTotal } = useNotifications();
   const [messages, setMessages] = useState([]);
@@ -158,6 +158,7 @@ export default function SentMessages() {
       <MessageViewModal
         message={selectedMessage}
         onClose={() => setSelectedMessage(null)}
+        onReply={onStartReply}
       />
     </main>
   );

@@ -12,7 +12,7 @@ const PAGE_SIZE = 10;
 
 const avatar = (name) => (name?.[0] ?? '?').toUpperCase();
 
-export default function Inbox() {
+export default function Inbox({ onStartReply }) {
   const { user } = useAuth();
   const { setInboxUnread } = useNotifications();
   const [messages, setMessages] = useState([]);
@@ -203,6 +203,7 @@ export default function Inbox() {
       <MessageViewModal
         message={selectedMessage}
         onClose={() => setSelectedMessage(null)}
+        onReply={onStartReply}
       />
     </main>
   );

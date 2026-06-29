@@ -1,8 +1,9 @@
+import { Button } from 'primereact/button';
 import { Dialog } from 'primereact/dialog';
 
 const avatar = (name) => (name?.[0] ?? '?').toUpperCase();
 
-const MessageViewModal = ({ message, onClose }) => {
+const MessageViewModal = ({ message, onClose, onReply }) => {
   if (!message) return null;
 
   const header = (
@@ -24,9 +25,19 @@ const MessageViewModal = ({ message, onClose }) => {
     </div>
   );
 
+  const footer = (
+    <div className="flex justify-end gap-2">
+      <Button label="Close" icon="pi pi-times" text severity="secondary" onClick={onClose} />
+      {onReply && (
+        <Button label="Reply" icon="pi pi-reply" onClick={() => onReply(message)} />
+      )}
+    </div>
+  );
+
   return (
     <Dialog
       header={header}
+      footer={footer}
       visible
       onHide={onClose}
       modal

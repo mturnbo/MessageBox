@@ -34,13 +34,13 @@ module.exports = {
       },
     },
     {
+      // Angular dev server — ng serve handles its own HMR, do not set watch: true
       name: 'messagebox-frontend-angular',
       cwd: `${__dirname}/frontend-angular`,
-      script: 'node_modules/@angular/cli/bin/ng',
+      script: 'node_modules/.bin/ng',
       args: 'serve --port 4000 --host 0.0.0.0',
       interpreter: 'none',
       instances: 1,
-      watch: true,
       autorestart: true,
       env: {
         NODE_ENV: 'development',
@@ -52,19 +52,23 @@ module.exports = {
       },
     },
     {
+      // React dev server via Vite — runs on 4001 to avoid conflict with Angular on 4000
+      // For production: build first with `npm run build`, then serve apps/frontend-react/dist/
       name: 'messagebox-frontend-react',
-      script: 'npx',
-      args: 'serve -s ./apps/frontend-react/dist/frontend/browser',
+      cwd: `${__dirname}/frontend-react`,
+      script: 'node_modules/.bin/vite',
+      args: '--port 4001 --host 0.0.0.0',
       interpreter: 'none',
       instances: 1,
+      autorestart: true,
       env: {
         NODE_ENV: 'development',
-        PORT: 4000,
+        PORT: 4001,
       },
       env_production: {
         NODE_ENV: 'production',
         PORT: 4001,
       },
-    }
+    },
   ],
 };
