@@ -37,7 +37,7 @@ module.exports = {
       // Angular dev server — ng serve handles its own HMR, do not set watch: true
       name: 'messagebox-frontend-angular',
       cwd: `${__dirname}/frontend-angular`,
-      script: 'node_modules/@angular/cli/bin/ng',
+      script: 'node_modules/.bin/ng',
       args: 'serve --port 4000 --host 0.0.0.0',
       interpreter: 'none',
       instances: 1,
