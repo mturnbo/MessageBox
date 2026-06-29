@@ -2,6 +2,7 @@ import { Router } from 'express';
 import UserController from '#controllers/user.controller.js';
 import { authMiddleware } from "#middlewares/auth.middleware.js";
 import apiRateLimiter from '#middlewares/apiRateLimit.js';
+import { requireOwnership } from '#middlewares/ownership.middleware.js';
 
 const router = Router();
 
@@ -172,7 +173,7 @@ router.post('/register', authMiddleware, UserController.createUser);
  *       429:
  *         description: Rate limit exceeded
  */
-router.post('/update/', authMiddleware, UserController.updateUser);
+router.post('/update/', authMiddleware, requireOwnership((req) => req.body.id), UserController.updateUser);
 
 /**
  * @swagger
@@ -198,6 +199,6 @@ router.post('/update/', authMiddleware, UserController.updateUser);
  *       429:
  *         description: Rate limit exceeded
  */
-router.delete('/delete/:id', authMiddleware, UserController.deleteUser);
+router.delete('/delete/:id', authMiddleware, requireOwnership((req) => req.params.id), UserController.deleteUser);
 
 export default router;

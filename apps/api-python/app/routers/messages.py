@@ -8,9 +8,10 @@ from app.models.dbmodels import (
     MessageOut,
     MessageListResponse,
     MessagePostResponse,
+    User,
 )
 from app.database import get_session
-from app.utilites.password import verify_token
+from app.utilites.password import verify_token, get_current_user
 from app.services import message_service
 from app.limiter import limiter, API_RATE_LIMIT
 
@@ -28,8 +29,10 @@ def get_inbox(
     limit: int = Query(default=DEFAULT_LIMIT, ge=1, le=MAX_LIMIT),
     page: int = Query(default=1, ge=1),
     session: Session = Depends(get_session),
-    username: str = Depends(verify_token),
+    current_user: User = Depends(get_current_user),
 ):
+    if current_user.id != recipient_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
     return message_service.get_inbox(session, recipient_id, limit, page)
 
 
@@ -41,8 +44,10 @@ def get_sent(
     limit: int = Query(default=DEFAULT_LIMIT, ge=1, le=MAX_LIMIT),
     page: int = Query(default=1, ge=1),
     session: Session = Depends(get_session),
-    username: str = Depends(verify_token),
+    current_user: User = Depends(get_current_user),
 ):
+    if current_user.id != sender_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
     return message_service.get_sent(session, sender_id, limit, page)
 
 
@@ -81,8 +86,10 @@ def create_message(
     payload: CreateMessageRequest,
     response: Response,
     session: Session = Depends(get_session),
-    username: str = Depends(verify_token),
+    current_user: User = Depends(get_current_user),
 ):
+    if current_user.id != payload.sender_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
     idempotency_key = request.headers.get("idempotency-key")
     message, replayed = message_service.create_message(session, payload, idempotency_key)
     if replayed:
@@ -99,8 +106,10 @@ def reply_to_message(
     payload: ReplyToMessageRequest,
     response: Response,
     session: Session = Depends(get_session),
-    username: str = Depends(verify_token),
+    current_user: User = Depends(get_current_user),
 ):
+    if current_user.id != payload.sender_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
     idempotency_key = request.headers.get("idempotency-key")
     message, thread_id, reply_to, replayed = message_service.reply_to_message(
         session, payload, idempotency_key
@@ -137,8 +146,10 @@ def delete_message(
     request: Request,
     payload: DeleteMessageRequest,
     session: Session = Depends(get_session),
-    username: str = Depends(verify_token),
+    current_user: User = Depends(get_current_user),
 ):
+    if current_user.id != payload.deleted_by:
+        raise HTTPException(status_code=403, detail="Forbidden")
     message, status_msg = message_service.delete_message(session, payload.id, payload.deleted_by)
     if message is None:
         raise HTTPException(status_code=404, detail="Message not found")
