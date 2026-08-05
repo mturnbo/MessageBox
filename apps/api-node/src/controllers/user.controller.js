@@ -3,6 +3,7 @@ import User from '#models/user.model.js';
 import { Op } from "sequelize";
 import { QUERIES } from "#config/constants.js";
 import UserService from "#services/user.service.js";
+import { sendError } from "#utils/errorResponse.js";
 
 const defaultAttributes = ['id', 'username', 'email', 'firstName', 'lastName', 'deviceAddress', 'dateCreated', 'lastLogin'];
 
@@ -20,7 +21,7 @@ const UserController = {
       });
       res.status(200).json(users);
     } catch (error) {
-      res.status(500).json({ error: error });
+      sendError(res, 500, 'Internal Server Error');
     }
   },
 
@@ -28,7 +29,7 @@ const UserController = {
     const { username, email, firstName, lastName, deviceAddress } = req.body;
     try {
       if (await UserService.isEmailOrUsernameTaken(email, username)) {
-        res.status(409).json({ error: 'Email or username already taken' });
+        return sendError(res, 409, 'Email or username already taken');
       }
       const newUser = await User.create({
         username,
@@ -39,7 +40,7 @@ const UserController = {
       });
       res.status(201).json(newUser);
     } catch (error) {
-      res.status(500).json({ error: 'Internal Server Error' });
+      sendError(res, 500, 'Internal Server Error');
     }
   },
 
@@ -60,10 +61,10 @@ const UserController = {
       if (user) {
         res.status(200).json(user);
       } else {
-        res.status(404).json({ error: 'User not found' });
+        sendError(res, 404, 'User not found');
       }
     } catch (error) {
-      res.status(500).json({ error: 'Internal Server Error' });
+      sendError(res, 500, 'Internal Server Error');
     }
   },
 
@@ -81,17 +82,14 @@ const UserController = {
         await user.save();
         res.status(200).json({ status: 'User updated successfully', user: user });
       } else {
-        res.status(404).json({ error: 'User not found' });
+        sendError(res, 404, 'User not found');
       }
     } catch (error) {
       if (error.name === 'SequelizeValidationError') {
         const validationErrors = error.errors.map(err => (`Validation error on field ${err.path}: ${err.message}`));
-        res.status(400).json({
-          status: 'User not updated',
-          errors: validationErrors,
-        });
+        sendError(res, 400, 'User not updated', validationErrors);
       } else {
-        res.status(500).json({error: 'Internal Server Error'});
+        sendError(res, 500, 'Internal Server Error');
       }
     }
   },
@@ -104,10 +102,10 @@ const UserController = {
         await user.destroy();
         res.status(200).json(user);
       } else {
-        res.status(404).json({ error: 'User not found' });
+        sendError(res, 404, 'User not found');
       }
     } catch (error) {
-      res.status(500).json({ error: 'Internal Server Error' });
+      sendError(res, 500, 'Internal Server Error');
     }
   }
 };

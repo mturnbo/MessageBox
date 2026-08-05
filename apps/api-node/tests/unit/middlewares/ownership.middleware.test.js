@@ -53,7 +53,7 @@ describe('requireOwnership', () => {
     await requireOwnership((r) => r.query.recipientId)(req, res, next);
 
     expect(res.status).toHaveBeenCalledWith(403);
-    expect(res.json).toHaveBeenCalledWith({ message: 'Forbidden' });
+    expect(res.json).toHaveBeenCalledWith({ error: { message: 'Forbidden' } });
     expect(next).not.toHaveBeenCalled();
   });
 
@@ -64,7 +64,7 @@ describe('requireOwnership', () => {
     await requireOwnership((r) => r.query.recipientId)(req, res, next);
 
     expect(res.status).toHaveBeenCalledWith(401);
-    expect(res.json).toHaveBeenCalledWith({ message: 'Authenticated user not found' });
+    expect(res.json).toHaveBeenCalledWith({ error: { message: 'Authenticated user not found' } });
     expect(next).not.toHaveBeenCalled();
   });
 

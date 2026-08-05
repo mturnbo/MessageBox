@@ -5,7 +5,7 @@ const apiRateLimiter = rateLimit({
   max: parseInt(process.env.API_RATE_LIMIT_MAX ?? '60'),
   standardHeaders: 'draft-7',
   legacyHeaders: false,
-  message: { message: 'Too many requests, please try again later.' },
+  message: { error: { message: 'Too many requests, please try again later.' } },
 });
 
 export default apiRateLimiter;

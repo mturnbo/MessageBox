@@ -73,7 +73,7 @@ describe('MessageController', () => {
       await MessageController.createMessage(req, res);
 
       expect(res.status).toHaveBeenCalledWith(500);
-      expect(res.json).toHaveBeenCalledWith({ error: 'Internal Server Error' });
+      expect(res.json).toHaveBeenCalledWith({ error: { message: 'Internal Server Error' } });
     });
 
     it('should replay an existing message for a duplicate idempotency key', async () => {
@@ -144,7 +144,7 @@ describe('MessageController', () => {
       await MessageController.getMessageById(req, res);
 
       expect(res.status).toHaveBeenCalledWith(404);
-      expect(res.json).toHaveBeenCalledWith({ error: 'Message not found' });
+      expect(res.json).toHaveBeenCalledWith({ error: { message: 'Message not found' } });
     });
 
     it('should handle errors when fetching message', async () => {
@@ -154,7 +154,7 @@ describe('MessageController', () => {
       await MessageController.getMessageById(req, res);
 
       expect(res.status).toHaveBeenCalledWith(500);
-      expect(res.json).toHaveBeenCalledWith({ error: 'Internal Server Error' });
+      expect(res.json).toHaveBeenCalledWith({ error: { message: 'Internal Server Error' } });
     });
   });
 
@@ -271,7 +271,7 @@ describe('MessageController', () => {
       await MessageController.replyToMessage(req, res);
 
       expect(res.status).toHaveBeenCalledWith(404);
-      expect(res.json).toHaveBeenCalledWith({ error: 'Message not found' });
+      expect(res.json).toHaveBeenCalledWith({ error: { message: 'Message not found' } });
     });
 
     it('should replay the original reply for a duplicate idempotency key', async () => {
@@ -416,7 +416,7 @@ describe('MessageController', () => {
       await MessageController.readMessage(req, res);
 
       expect(res.status).toHaveBeenCalledWith(404);
-      expect(res.json).toHaveBeenCalledWith({ error: 'Message not found' });
+      expect(res.json).toHaveBeenCalledWith({ error: { message: 'Message not found' } });
     });
 
     it('should handle errors when reading message', async () => {
@@ -426,7 +426,7 @@ describe('MessageController', () => {
       await MessageController.readMessage(req, res);
 
       expect(res.status).toHaveBeenCalledWith(500);
-      expect(res.json).toHaveBeenCalledWith({ error: 'Internal Server Error' });
+      expect(res.json).toHaveBeenCalledWith({ error: { message: 'Internal Server Error' } });
     });
   });
 
@@ -495,7 +495,27 @@ describe('MessageController', () => {
       await MessageController.deleteMessage(req, res);
 
       expect(res.status).toHaveBeenCalledWith(404);
-      expect(res.json).toHaveBeenCalledWith({error: 'Message not found'});
+      expect(res.json).toHaveBeenCalledWith({ error: { message: 'Message not found' } });
+    });
+
+    it('should return 403 when deletedBy is neither the sender nor the recipient', async () => {
+      const mockMessage = {
+        id: 1,
+        senderId: 100,
+        recipientId: 200,
+        deletedBySender: null,
+        deletedByRecipient: null,
+        save: jest.fn().mockResolvedValue(true)
+      };
+
+      req.body = {id: 1, deletedBy: 300};
+      sandbox.stub(Message, 'findByPk').resolves(mockMessage);
+
+      await MessageController.deleteMessage(req, res);
+
+      expect(mockMessage.save).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith({ error: { message: 'Not a party to this message' } });
     });
 
     it('should handle errors when deleting message', async () => {
@@ -505,7 +525,7 @@ describe('MessageController', () => {
       await MessageController.deleteMessage(req, res);
 
       expect(res.status).toHaveBeenCalledWith(500);
-      expect(res.json).toHaveBeenCalledWith({error: 'Internal Server Error'});
+      expect(res.json).toHaveBeenCalledWith({ error: { message: 'Internal Server Error' } });
     });
   });
 });

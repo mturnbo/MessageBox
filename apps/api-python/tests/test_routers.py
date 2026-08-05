@@ -208,6 +208,7 @@ def test_get_user_returns_camel_case(client, session):
 def test_get_user_by_id_not_found(client):
     resp = client.get("/v1/users/9999", headers=auth_headers())
     assert resp.status_code == 404
+    assert resp.json() == {"error": {"message": "User not found"}}
 
 
 def test_get_user_by_id_requires_auth(client, session):
@@ -738,6 +739,18 @@ def test_delete_message_by_recipient(client, session, two_users):
     )
     assert resp.status_code == 200
     assert "recipient" in resp.json()["status"]
+
+
+def test_delete_message_not_a_party(client, session, two_users):
+    alice, bob = two_users
+    carol = make_user(session, username="carol", email="carol@example.com")
+    msg = make_message(session, alice.id, bob.id)
+    resp = client.post(
+        "/v1/messages/delete",
+        headers=auth_headers("carol"),
+        json={"id": msg.id, "deleted_by": carol.id},
+    )
+    assert resp.status_code == 403
 
 
 def test_delete_message_not_found(client, session):

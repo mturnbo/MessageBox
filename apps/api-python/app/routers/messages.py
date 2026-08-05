@@ -153,4 +153,6 @@ def delete_message(
     message, status_msg = message_service.delete_message(session, payload.id, payload.deleted_by)
     if message is None:
         raise HTTPException(status_code=404, detail="Message not found")
+    if status_msg is None:
+        raise HTTPException(status_code=403, detail="Not a party to this message")
     return {"status": status_msg}

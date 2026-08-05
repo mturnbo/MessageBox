@@ -36,7 +36,7 @@ def create_access_token(data: dict):
 def create_refresh_token(data: dict):
     to_encode = data.copy()
     exp_seconds = int(os.getenv('JWT_REFRESH_EXPIRATION_TIME', '604800'))
-    expire = datetime.utcnow() + timedelta(seconds=exp_seconds)
+    expire = datetime.now(timezone.utc) + timedelta(seconds=exp_seconds)
     to_encode.update({"exp": expire, "type": "refresh"})
     return jwt.encode(to_encode, JWT_SECRET, algorithm=ALGORITHM)
 

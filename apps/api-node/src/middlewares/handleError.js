@@ -42,12 +42,7 @@ export const handleDatabaseError = (error, operation) => {
 
 export const handleError = (error, req, res, next) => {
     if (error instanceof CustomError || IsApiError(error)) {
-        return res.status(error.statusCode).json({ message: error.message });
+        return res.status(error.statusCode).json({ error: { message: error.message } });
     }
-    return res
-        .status(500)
-        .json({
-          status: "Something went wrong, please try again!",
-          error: error.message,
-        });
+    return res.status(500).json({ error: { message: error.message } });
 };
