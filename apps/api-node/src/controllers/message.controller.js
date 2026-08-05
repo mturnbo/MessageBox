@@ -274,10 +274,13 @@ const MessageController = {
     const id = req.params.id;
     try {
       const message = await Message.findByPk(id);
-      if (message) {
-        return res.status(200).json(message);
+      if (!message) {
+        return sendError(res, 404, 'Message not found');
       }
-      return sendError(res, 404, 'Message not found');
+      if (req.user.id !== message.senderId && req.user.id !== message.recipientId) {
+        return sendError(res, 403, 'Forbidden');
+      }
+      return res.status(200).json(message);
     } catch (error) {
       return sendError(res, 500, 'Internal Server Error');
     }
@@ -295,6 +298,9 @@ const MessageController = {
 
       if (!message) {
         return sendError(res, 404, 'Message not found');
+      }
+      if (req.user.id !== message.senderId && req.user.id !== message.recipientId) {
+        return sendError(res, 403, 'Forbidden');
       }
 
       const thread = await findThreadForMessage(messageId);
@@ -341,13 +347,16 @@ const MessageController = {
     const id = req.body.id;
     try {
       const message = await Message.findByPk(id);
-      if (message) {
-        message.readAt = formatTimestamp();
-        message.readerAddress = req.body.readerAddress;
-        await message.save();
-        return res.status(200).json({ status: 'Message read successfully' });
+      if (!message) {
+        return sendError(res, 404, 'Message not found');
       }
-      return sendError(res, 404, 'Message not found');
+      if (req.user.id !== message.senderId && req.user.id !== message.recipientId) {
+        return sendError(res, 403, 'Forbidden');
+      }
+      message.readAt = formatTimestamp();
+      message.readerAddress = req.body.readerAddress;
+      await message.save();
+      return res.status(200).json({ status: 'Message read successfully' });
     } catch (error) {
       return sendError(res, 500, 'Internal Server Error');
     }

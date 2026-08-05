@@ -125,8 +125,9 @@ describe('MessageController', () => {
 
   describe('getMessageById', () => {
     it('should return a message when found', async () => {
-      const mockMessage = { id: 1, subject: 'Test', body: 'Test body' };
+      const mockMessage = { id: 1, subject: 'Test', body: 'Test body', senderId: 100, recipientId: 200 };
       req.params.id = '1';
+      req.user = { id: 100 };
 
       sandbox.stub(Message, 'findByPk').resolves(mockMessage);
 
@@ -145,6 +146,19 @@ describe('MessageController', () => {
 
       expect(res.status).toHaveBeenCalledWith(404);
       expect(res.json).toHaveBeenCalledWith({ error: { message: 'Message not found' } });
+    });
+
+    it('should return 403 when the authenticated user is neither the sender nor the recipient', async () => {
+      const mockMessage = { id: 1, subject: 'Test', body: 'Test body', senderId: 100, recipientId: 200 };
+      req.params.id = '1';
+      req.user = { id: 300 };
+
+      sandbox.stub(Message, 'findByPk').resolves(mockMessage);
+
+      await MessageController.getMessageById(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith({ error: { message: 'Forbidden' } });
     });
 
     it('should handle errors when fetching message', async () => {
@@ -326,6 +340,7 @@ describe('MessageController', () => {
   describe('getThreadByMessageId', () => {
     it('should return a full thread for a message in a thread', async () => {
       req.params.id = '14';
+      req.user = { id: 100 };
 
       const topMessage = {
         id: 10,
@@ -337,6 +352,8 @@ describe('MessageController', () => {
         id: 14,
         body: 'reply',
         sentAt: '2024-01-01T10:05:00.000Z',
+        senderId: 100,
+        recipientId: 200,
         toJSON: jest.fn().mockReturnValue({ id: 14, body: 'reply', sentAt: '2024-01-01T10:05:00.000Z' })
       };
 
@@ -365,7 +382,8 @@ describe('MessageController', () => {
 
     it('should return the single message when no thread exists', async () => {
       req.params.id = '10';
-      const message = { id: 10, body: 'hello' };
+      req.user = { id: 100 };
+      const message = { id: 10, body: 'hello', senderId: 100, recipientId: 200 };
 
       sandbox.stub(Message, 'findByPk').resolves(message);
       sandbox.stub(Thread, 'findOne').resolves(null);
@@ -375,6 +393,19 @@ describe('MessageController', () => {
 
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith({ thread: null, messages: [message] });
+    });
+
+    it('should return 403 when the authenticated user is neither the sender nor the recipient', async () => {
+      req.params.id = '10';
+      req.user = { id: 999 };
+      const message = { id: 10, body: 'hello', senderId: 100, recipientId: 200 };
+
+      sandbox.stub(Message, 'findByPk').resolves(message);
+
+      await MessageController.getThreadByMessageId(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith({ error: { message: 'Forbidden' } });
     });
   });
 
@@ -392,12 +423,15 @@ describe('MessageController', () => {
       const mockDate = '2024-01-01 12:00:00';
       const mockMessage = {
         id: 1,
+        senderId: 100,
+        recipientId: 200,
         readAt: null,
         readerAddress: null,
         save: jest.fn().mockResolvedValue(true)
       };
 
       req.body = { id: 1, readerAddress: '192.168.1.1' };
+      req.user = { id: 200 };
       sandbox.stub(Message, 'findByPk').resolves(mockMessage);
 
       await MessageController.readMessage(req, res);
@@ -417,6 +451,27 @@ describe('MessageController', () => {
 
       expect(res.status).toHaveBeenCalledWith(404);
       expect(res.json).toHaveBeenCalledWith({ error: { message: 'Message not found' } });
+    });
+
+    it('should return 403 when the authenticated user is neither the sender nor the recipient', async () => {
+      const mockMessage = {
+        id: 1,
+        senderId: 100,
+        recipientId: 200,
+        readAt: null,
+        readerAddress: null,
+        save: jest.fn().mockResolvedValue(true)
+      };
+
+      req.body = { id: 1, readerAddress: '192.168.1.1' };
+      req.user = { id: 300 };
+      sandbox.stub(Message, 'findByPk').resolves(mockMessage);
+
+      await MessageController.readMessage(req, res);
+
+      expect(mockMessage.save).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith({ error: { message: 'Forbidden' } });
     });
 
     it('should handle errors when reading message', async () => {

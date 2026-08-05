@@ -11,7 +11,7 @@ from app.models.dbmodels import (
     User,
 )
 from app.database import get_session
-from app.utilites.password import verify_token, get_current_user
+from app.utilites.password import get_current_user
 from app.services import message_service
 from app.limiter import limiter, API_RATE_LIMIT
 
@@ -57,12 +57,14 @@ def get_thread(
     request: Request,
     id: int,
     session: Session = Depends(get_session),
-    username: str = Depends(verify_token),
+    current_user: User = Depends(get_current_user),
 ):
-    result = message_service.get_thread_by_message_id(session, id)
-    if result is None:
+    message = message_service.get_message_by_id(session, id)
+    if not message:
         raise HTTPException(status_code=404, detail="Message not found")
-    return result
+    if current_user.id not in (message.sender_id, message.recipient_id):
+        raise HTTPException(status_code=403, detail="Forbidden")
+    return message_service.get_thread_by_message_id(session, id)
 
 
 @router.get("/{id}", response_model=MessageOut)
@@ -71,11 +73,13 @@ def get_message(
     request: Request,
     id: int,
     session: Session = Depends(get_session),
-    username: str = Depends(verify_token),
+    current_user: User = Depends(get_current_user),
 ):
     message = message_service.get_message_by_id(session, id)
     if not message:
         raise HTTPException(status_code=404, detail="Message not found")
+    if current_user.id not in (message.sender_id, message.recipient_id):
+        raise HTTPException(status_code=403, detail="Forbidden")
     return message
 
 
@@ -132,11 +136,14 @@ def read_message(
     request: Request,
     payload: ReadMessageRequest,
     session: Session = Depends(get_session),
-    username: str = Depends(verify_token),
+    current_user: User = Depends(get_current_user),
 ):
-    message = message_service.read_message(session, payload.id, payload.reader_address)
+    message = message_service.get_message_by_id(session, payload.id)
     if not message:
         raise HTTPException(status_code=404, detail="Message not found")
+    if current_user.id not in (message.sender_id, message.recipient_id):
+        raise HTTPException(status_code=403, detail="Forbidden")
+    message_service.read_message(session, payload.id, payload.reader_address)
     return {"status": "Message read successfully"}
 
 
