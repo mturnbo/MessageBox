@@ -51,6 +51,9 @@ def decode_token(token_str: str):
 def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
     try:
         payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[ALGORITHM])
+        if payload.get("type") == "refresh":
+            raise HTTPException(status_code=401, detail="Could not validate credentials")
+
         username: str = payload.get("sub")
         if username is None:
             raise HTTPException(status_code=401, detail="Invalid credentials")

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import MessageController from '#controllers/message.controller.js';
 import { authMiddleware } from "#middlewares/auth.middleware.js";
 import apiRateLimiter from '#middlewares/apiRateLimit.js';
-import { requireOwnership } from '#middlewares/ownership.middleware.js';
+import { requireOwnership, resolveAuthenticatedUser } from '#middlewares/ownership.middleware.js';
 
 const router = Router();
 
@@ -126,7 +126,7 @@ router.get('/sent', authMiddleware, requireOwnership((req) => req.query.senderId
  *       429:
  *         description: Rate limit exceeded
  */
-router.get('/:id/thread', authMiddleware, MessageController.getThreadByMessageId);
+router.get('/:id/thread', authMiddleware, resolveAuthenticatedUser, MessageController.getThreadByMessageId);
 
 /**
  * @swagger
@@ -156,7 +156,7 @@ router.get('/:id/thread', authMiddleware, MessageController.getThreadByMessageId
  *       429:
  *         description: Rate limit exceeded
  */
-router.get('/:id', authMiddleware, MessageController.getMessageById);
+router.get('/:id', authMiddleware, resolveAuthenticatedUser, MessageController.getMessageById);
 
 /**
  * @swagger
@@ -266,7 +266,7 @@ router.post('/reply', authMiddleware, requireOwnership((req) => req.body.senderI
  *       429:
  *         description: Rate limit exceeded
  */
-router.post('/read', authMiddleware, MessageController.readMessage);
+router.post('/read', authMiddleware, resolveAuthenticatedUser, MessageController.readMessage);
 
 /**
  * @swagger

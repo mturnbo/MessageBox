@@ -126,6 +126,15 @@ def test_refresh_token_rejects_access_token_as_refresh(client, session):
     assert resp.status_code == 401
 
 
+def test_refresh_token_rejected_as_access_token(client, session):
+    make_user(session)
+    login = client.post("/v1/auth", json={"username": "alice", "password": "secret"})
+    refresh_token = login.json()["refreshToken"]
+    resp = client.get("/v1/users/", headers={"Authorization": f"Bearer {refresh_token}"})
+
+    assert resp.status_code == 401
+
+
 # ── GET /users/ ───────────────────────────────────────────────────────────────
 
 def test_get_all_users_returns_list(client, session):
@@ -417,7 +426,8 @@ def test_get_message_by_id(client, session, two_users):
     assert resp.json()["subject"] == "Hello"
 
 
-def test_get_message_by_id_not_found(client):
+def test_get_message_by_id_not_found(client, session):
+    make_user(session)
     resp = client.get("/v1/messages/9999", headers=auth_headers())
     assert resp.status_code == 404
 
@@ -426,6 +436,14 @@ def test_get_message_by_id_requires_auth(client, session, two_users):
     alice, bob = two_users
     msg = make_message(session, alice.id, bob.id)
     resp = client.get(f"/v1/messages/{msg.id}")
+    assert resp.status_code == 403
+
+
+def test_get_message_by_id_forbidden_for_non_party(client, session, two_users):
+    alice, bob = two_users
+    carol = make_user(session, username="carol", email="carol@example.com")
+    msg = make_message(session, alice.id, bob.id)
+    resp = client.get(f"/v1/messages/{msg.id}", headers=auth_headers("carol"))
     assert resp.status_code == 403
 
 
@@ -673,7 +691,8 @@ def test_get_thread_no_thread(client, session, two_users):
     assert len(body["messages"]) == 1
 
 
-def test_get_thread_not_found(client):
+def test_get_thread_not_found(client, session):
+    make_user(session)
     resp = client.get("/v1/messages/9999/thread", headers=auth_headers())
     assert resp.status_code == 404
 
@@ -682,6 +701,14 @@ def test_get_thread_requires_auth(client, session, two_users):
     alice, bob = two_users
     msg = make_message(session, alice.id, bob.id)
     resp = client.get(f"/v1/messages/{msg.id}/thread")
+    assert resp.status_code == 403
+
+
+def test_get_thread_forbidden_for_non_party(client, session, two_users):
+    alice, bob = two_users
+    carol = make_user(session, username="carol", email="carol@example.com")
+    msg = make_message(session, alice.id, bob.id)
+    resp = client.get(f"/v1/messages/{msg.id}/thread", headers=auth_headers("carol"))
     assert resp.status_code == 403
 
 
@@ -699,7 +726,8 @@ def test_read_message(client, session, two_users):
     assert resp.json()["status"] == "Message read successfully"
 
 
-def test_read_message_not_found(client):
+def test_read_message_not_found(client, session):
+    make_user(session)
     resp = client.post(
         "/v1/messages/read",
         headers=auth_headers(),
@@ -712,6 +740,18 @@ def test_read_message_requires_auth(client, session, two_users):
     alice, bob = two_users
     msg = make_message(session, alice.id, bob.id)
     resp = client.post("/v1/messages/read", json={"id": msg.id, "reader_address": "1.2.3.4"})
+    assert resp.status_code == 403
+
+
+def test_read_message_forbidden_for_non_party(client, session, two_users):
+    alice, bob = two_users
+    carol = make_user(session, username="carol", email="carol@example.com")
+    msg = make_message(session, alice.id, bob.id)
+    resp = client.post(
+        "/v1/messages/read",
+        headers=auth_headers("carol"),
+        json={"id": msg.id, "reader_address": "1.2.3.4"},
+    )
     assert resp.status_code == 403
 
 
