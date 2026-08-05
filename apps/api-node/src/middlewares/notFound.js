@@ -1,2 +1,2 @@
 export const notFound = (req, res) =>
-    res.status(404).send("Route doesn't exist!");
+    res.status(404).json({ error: { message: "Route doesn't exist!" } });

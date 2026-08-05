@@ -7,6 +7,7 @@ import sequelize from '#config/database.js';
 import Message from '#models/message.model.js';
 import Thread from '#models/thread.model.js';
 import ThreadMessage from '#models/thread-messages.model.js';
+import { sendError } from '#utils/errorResponse.js';
 
 const formatTimestamp = () => new Date().toISOString().replace(/T/, ' ').replace(/\..+/g, '');
 const AUTO_IDEMPOTENCY_WINDOW_MS = 30 * 1000;
@@ -117,7 +118,7 @@ const MessageController = {
     const offset = (page - 1) * limit;
 
     if (!senderId || isNaN(senderId)) {
-      return res.status(400).json({ error: 'senderId query param is required' });
+      return sendError(res, 400, 'senderId query param is required');
     }
 
     try {
@@ -132,7 +133,7 @@ const MessageController = {
       });
       return res.status(200).json({ messages: rows, total: count, page, limit });
     } catch (error) {
-      return res.status(500).json({ error: 'Internal Server Error' });
+      return sendError(res, 500, 'Internal Server Error');
     }
   },
 
@@ -143,7 +144,7 @@ const MessageController = {
     const offset = (page - 1) * limit;
 
     if (!recipientId || isNaN(recipientId)) {
-      return res.status(400).json({ error: 'recipientId query param is required' });
+      return sendError(res, 400, 'recipientId query param is required');
     }
 
     try {
@@ -158,7 +159,7 @@ const MessageController = {
       });
       return res.status(200).json({ messages: rows, total: count, page, limit });
     } catch (error) {
-      return res.status(500).json({ error: 'Internal Server Error' });
+      return sendError(res, 500, 'Internal Server Error');
     }
   },
 
@@ -174,7 +175,7 @@ const MessageController = {
       return res.status(201).json(buildMessageResponse(newMessage, null, null, false));
     } catch (error) {
       if (!isClientMessageIdConflict(error)) {
-        return res.status(500).json({ error: 'Internal Server Error' });
+        return sendError(res, 500, 'Internal Server Error');
       }
 
       try {
@@ -183,16 +184,16 @@ const MessageController = {
         });
 
         if (!existingMessage) {
-          return res.status(409).json({ error: 'Message request already processed but response could not be reconstructed' });
+          return sendError(res, 409, 'Message request already processed but response could not be reconstructed');
         }
 
         if (!isSameMessageRequest(existingMessage, req.body)) {
-          return res.status(409).json({ error: 'clientMessageId reuse with different payload is not allowed' });
+          return sendError(res, 409, 'clientMessageId reuse with different payload is not allowed');
         }
 
         return res.status(200).json(buildMessageResponse(existingMessage, null, null, true));
       } catch (lookupError) {
-        return res.status(500).json({ error: 'Internal Server Error' });
+        return sendError(res, 500, 'Internal Server Error');
       }
     }
   },
@@ -201,7 +202,7 @@ const MessageController = {
     const replyToId = parseInt(req.body.replyToId);
 
     if (!replyToId || isNaN(replyToId)) {
-      return res.status(400).json({ error: 'replyToId is required' });
+      return sendError(res, 400, 'replyToId is required');
     }
 
     const clientMessageId = resolveClientMessageId(req, req.body, replyToId);
@@ -211,7 +212,7 @@ const MessageController = {
         const parentMessage = await Message.findByPk(replyToId, { transaction });
 
         if (!parentMessage) {
-          return { status: 404, payload: { error: 'Message not found' } };
+          return { status: 404, payload: { error: { message: 'Message not found' } } };
         }
 
         let thread = await findThreadForMessage(replyToId, transaction);
@@ -243,7 +244,7 @@ const MessageController = {
       return res.status(result.status).json(result.payload);
     } catch (error) {
       if (!isClientMessageIdConflict(error)) {
-        return res.status(500).json({ error: 'Internal Server Error' });
+        return sendError(res, 500, 'Internal Server Error');
       }
 
       try {
@@ -252,19 +253,19 @@ const MessageController = {
         });
 
         if (!existingMessage) {
-          return res.status(409).json({ error: 'Message request already processed but response could not be reconstructed' });
+          return sendError(res, 409, 'Message request already processed but response could not be reconstructed');
         }
 
         const metadata = await getReplyMetadata(existingMessage.id);
         if (!isSameMessageRequest(existingMessage, req.body, metadata.replyTo)) {
-          return res.status(409).json({ error: 'clientMessageId reuse with different payload is not allowed' });
+          return sendError(res, 409, 'clientMessageId reuse with different payload is not allowed');
         }
 
         return res.status(200).json(
           buildMessageResponse(existingMessage, metadata.threadId, metadata.replyTo, true)
         );
       } catch (lookupError) {
-        return res.status(500).json({ error: 'Internal Server Error' });
+        return sendError(res, 500, 'Internal Server Error');
       }
     }
   },
@@ -276,9 +277,9 @@ const MessageController = {
       if (message) {
         return res.status(200).json(message);
       }
-      return res.status(404).json({ error: 'Message not found' });
+      return sendError(res, 404, 'Message not found');
     } catch (error) {
-      return res.status(500).json({ error: 'Internal Server Error' });
+      return sendError(res, 500, 'Internal Server Error');
     }
   },
 
@@ -286,14 +287,14 @@ const MessageController = {
     const messageId = parseInt(req.params.id);
 
     if (!messageId || isNaN(messageId)) {
-      return res.status(400).json({ error: 'Valid message id is required' });
+      return sendError(res, 400, 'Valid message id is required');
     }
 
     try {
       const message = await Message.findByPk(messageId);
 
       if (!message) {
-        return res.status(404).json({ error: 'Message not found' });
+        return sendError(res, 404, 'Message not found');
       }
 
       const thread = await findThreadForMessage(messageId);
@@ -332,7 +333,7 @@ const MessageController = {
         })),
       });
     } catch (error) {
-      return res.status(500).json({ error: 'Internal Server Error' });
+      return sendError(res, 500, 'Internal Server Error');
     }
   },
 
@@ -346,9 +347,9 @@ const MessageController = {
         await message.save();
         return res.status(200).json({ status: 'Message read successfully' });
       }
-      return res.status(404).json({ error: 'Message not found' });
+      return sendError(res, 404, 'Message not found');
     } catch (error) {
-      return res.status(500).json({ error: 'Internal Server Error' });
+      return sendError(res, 500, 'Internal Server Error');
     }
   },
 
@@ -357,6 +358,10 @@ const MessageController = {
     try {
       const message = await Message.findByPk(id);
       if (message) {
+        if (req.body.deletedBy !== message.senderId && req.body.deletedBy !== message.recipientId) {
+          return sendError(res, 403, 'Not a party to this message');
+        }
+
         const deleteDate = formatTimestamp();
         let statusMsg = '';
         if (req.body.deletedBy === message.senderId) {
@@ -371,9 +376,9 @@ const MessageController = {
         }
         return res.status(200).json({ status: statusMsg });
       }
-      return res.status(404).json({ error: 'Message not found' });
+      return sendError(res, 404, 'Message not found');
     } catch (error) {
-      return res.status(500).json({ error: 'Internal Server Error' });
+      return sendError(res, 500, 'Internal Server Error');
     }
   }
 };

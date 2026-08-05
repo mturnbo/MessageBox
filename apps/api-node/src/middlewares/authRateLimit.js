@@ -5,7 +5,7 @@ const authRateLimiter = rateLimit({
   max: parseInt(process.env.AUTH_RATE_LIMIT_MAX ?? '10'),
   standardHeaders: 'draft-7',
   legacyHeaders: false,
-  message: { message: 'Too many login attempts, please try again later.' },
+  message: { error: { message: 'Too many login attempts, please try again later.' } },
 });
 
 export default authRateLimiter;

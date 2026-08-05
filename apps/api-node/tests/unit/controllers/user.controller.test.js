@@ -2,6 +2,7 @@ import {beforeEach, describe, expect, it, jest} from "@jest/globals";
 import sinon from 'sinon';
 import UserController from '#controllers/user.controller';
 import User from '#models/user.model';
+import UserService from '#services/user.service.js';
 import { Op } from 'sequelize';
 import { QUERIES } from '#config/constants.js';
 
@@ -151,7 +152,7 @@ describe('UserController', () => {
       await UserController.getAllUsers(req, res);
 
       expect(res.status).toHaveBeenCalledWith(500);
-      expect(res.json).toHaveBeenCalledWith({ error: dbError });
+      expect(res.json).toHaveBeenCalledWith({ error: { message: 'Internal Server Error' } });
     });
 
     it('should handle negative page numbers by treating as NaN', async () => {
@@ -268,7 +269,7 @@ describe('UserController', () => {
       await UserController.getUser(req, res);
 
       expect(res.status).toHaveBeenCalledWith(404);
-      expect(res.json).toHaveBeenCalledWith({ error: 'User not found' });
+      expect(res.json).toHaveBeenCalledWith({ error: { message: 'User not found' } });
     });
   });
 
@@ -297,6 +298,22 @@ describe('UserController', () => {
       });
       expect(res.status).toHaveBeenCalledWith(201);
       expect(res.json).toHaveBeenCalledWith(mockCreatedUser);
+    });
+
+    it('should return 409 and not attempt to create the user when email or username is taken', async () => {
+      req.body = {
+        username: 'testuser',
+        email: 'testuser@email.com',
+      };
+      sandbox.stub(UserService, 'isEmailOrUsernameTaken').resolves(true);
+      const createStub = sandbox.stub(User, 'create').resolves({});
+
+      await UserController.createUser(req, res);
+
+      expect(createStub.called).toBe(false);
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(res.status).toHaveBeenCalledTimes(1);
+      expect(res.json).toHaveBeenCalledWith({ error: { message: 'Email or username already taken' } });
     });
   })
 

@@ -256,10 +256,12 @@ def read_message(session: Session, message_id: int, reader_address: str | None) 
 
 def delete_message(
     session: Session, message_id: int, deleted_by_user_id: int
-) -> tuple[Message, str] | tuple[None, None]:
+) -> tuple[Message, str | None] | tuple[None, None]:
     message = session.get(Message, message_id)
     if not message:
         return None, None
+    if deleted_by_user_id not in (message.sender_id, message.recipient_id):
+        return message, None
     now = datetime.now(timezone.utc)
     status_msg = ""
     if deleted_by_user_id == message.sender_id:
