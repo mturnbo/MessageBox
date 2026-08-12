@@ -1,16 +1,14 @@
 from datetime import datetime, timedelta, timezone
 import jwt
-from dotenv import load_dotenv
 import os
 import bcrypt
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlmodel import Session, select
+from app.config import JWT_SECRET
 from app.database import get_session
 from app.models.dbmodels import User
 
-load_dotenv()
-JWT_SECRET = os.getenv("JWT_SECRET", "")
 ALGORITHM = "HS256"
 
 security = HTTPBearer()

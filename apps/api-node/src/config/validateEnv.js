@@ -1,7 +1,13 @@
+import dotenv from 'dotenv';
+
+dotenv.config();
+
 const REQUIRED = [
   'DB_DATABASE', 'DB_USER', 'DB_PASSWORD', 'DB_HOST', 'DB_TYPE',
   'JWT_SECRET', 'JWT_EXPIRATION_TIME',
 ];
+
+export const JWT_SECRET = process.env.JWT_SECRET;
 
 export function validateEnv() {
   const missing = REQUIRED.filter(v => !process.env[v]);
