@@ -16,7 +16,7 @@ security = HTTPBearer()
 
 def generate_hashed_password(password):
     salt = bcrypt.gensalt(rounds=10)
-    return bcrypt.hashpw(password.encode('utf-8'), salt)
+    return bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
 
 
 def compare_password(password, hashed_password):
