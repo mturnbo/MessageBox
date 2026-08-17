@@ -110,7 +110,7 @@ User.associate = (models) => {
 
 User.addHook("beforeSave", async (user) => {
   if (user.password) {
-    user.password_hash = await bcrypt.hash(user.password, 12);
+    user.passwordHash = await bcrypt.hash(user.password, 12);
   }
 });
 
