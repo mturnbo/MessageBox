@@ -1,6 +1,5 @@
-import { describe, it, expect, jest } from '@jest/globals';
+import { describe, it, expect, jest, beforeAll } from '@jest/globals';
 import jwt from 'jsonwebtoken';
-import RefreshController from '#controllers/refresh.controller';
 
 const SECRET = 'test-secret';
 process.env.JWT_SECRET = SECRET;
@@ -15,6 +14,15 @@ function makeRefreshToken(overrides = {}) {
 }
 
 describe('RefreshController.refreshToken', () => {
+  let RefreshController;
+
+  beforeAll(async () => {
+    // Import after JWT_SECRET is set above, since the controller now imports
+    // the validated secret from config, which captures process.env.JWT_SECRET
+    // into a module-level constant at import time.
+    ({ default: RefreshController } = await import('#controllers/refresh.controller'));
+  });
+
   it('returns a new access token for a valid refresh token', () => {
     const refreshToken = makeRefreshToken();
     const req = { body: { refreshToken } };

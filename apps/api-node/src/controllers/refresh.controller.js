@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import { JWT_SECRET } from '#config/validateEnv.js';
 import { BadRequestError, UnauthorizedError } from '#utils/ApiErrors.js';
 
 const RefreshController = {
@@ -6,11 +7,11 @@ const RefreshController = {
     const { refreshToken } = req.body;
     if (!refreshToken) throw new BadRequestError();
     try {
-      const payload = jwt.verify(refreshToken, process.env.JWT_SECRET);
+      const payload = jwt.verify(refreshToken, JWT_SECRET);
       if (payload.type !== 'refresh') throw new UnauthorizedError();
       const token = jwt.sign(
         { username: payload.username },
-        process.env.JWT_SECRET,
+        JWT_SECRET,
         { expiresIn: process.env.JWT_EXPIRATION_TIME }
       );
       res.json({ token });

@@ -1,11 +1,9 @@
 // Authentication Controller
 import User from '#models/user.model.js';
 import jwt from "jsonwebtoken";
-import dotenv from "dotenv";
 import { Op } from 'sequelize';
+import { JWT_SECRET } from "#config/validateEnv.js";
 import { BadRequestError, UnauthorizedError } from "#utils/ApiErrors.js";
-
-dotenv.config();
 
 const AuthenticationController = {
 
@@ -23,13 +21,13 @@ const AuthenticationController = {
 
     const token = jwt.sign(
       { username: user.username },
-      process.env.JWT_SECRET,
+      JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRATION_TIME }
     );
 
     const refreshToken = jwt.sign(
       { username: user.username, type: 'refresh' },
-      process.env.JWT_SECRET,
+      JWT_SECRET,
       { expiresIn: process.env.JWT_REFRESH_EXPIRATION_TIME ?? '7d' }
     );
 

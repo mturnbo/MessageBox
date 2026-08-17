@@ -1,11 +1,8 @@
 import jwt from "jsonwebtoken";
 import { STATUS } from "#config/constants.js";
-import dotenv from "dotenv";
-
-dotenv.config();
+import { JWT_SECRET } from "#config/validateEnv.js";
 
 let jwtidCounter = 0;
-const JWT_SECRET = process.env.JWT_SECRET;
 
 const JwtService = {
   jwtSign: (_payload) => {
