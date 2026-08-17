@@ -26,7 +26,7 @@ const UserController = {
   },
 
   createUser: async (req, res) => {
-    const { username, email, firstName, lastName, deviceAddress } = req.body;
+    const { username, email, password, firstName, lastName, deviceAddress } = req.body;
     try {
       if (await UserService.isEmailOrUsernameTaken(email, username)) {
         return sendError(res, 409, 'Email or username already taken');
@@ -34,6 +34,7 @@ const UserController = {
       const newUser = await User.create({
         username,
         email,
+        password,
         firstName,
         lastName,
         deviceAddress

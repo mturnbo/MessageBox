@@ -280,6 +280,7 @@ describe('UserController', () => {
         firstName: 'Test',
         lastName: 'User',
         email: 'testuser@email.com',
+        password: 'S3curePassword!',
         deviceAddress: '72.45.45.99',
       };
       const mockCreatedUser = { id: 1, ...mockUserData };
@@ -294,6 +295,7 @@ describe('UserController', () => {
         firstName: 'Test',
         lastName: 'User',
         email: 'testuser@email.com',
+        password: 'S3curePassword!',
         deviceAddress: '72.45.45.99',
       });
       expect(res.status).toHaveBeenCalledWith(201);
