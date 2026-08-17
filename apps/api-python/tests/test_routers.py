@@ -41,7 +41,7 @@ def make_user(session, username="alice", email="alice@example.com", password="se
         first_name="Alice",
         last_name="Smith",
         device_address="aa:bb:cc:dd:ee:ff",
-        password_hash=generate_hashed_password(password).decode("utf-8"),
+        password_hash=generate_hashed_password(password),
     )
     session.add(user)
     session.commit()
