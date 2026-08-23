@@ -1,6 +1,7 @@
 import { Sequelize } from "sequelize";
 import databaseConfig from "../config/database";
 import fs from "fs";
+import logger from "../config/logger.js";
 
 const modelFiles = fs
   .readdirSync(__dirname + "/../models/")
@@ -25,9 +26,9 @@ const sequelizeService = {
         model.default.associate && model.default.associate(connection.models);
       });
 
-      console.log("[SEQUELIZE] Database service initialized");
+      logger.info("[SEQUELIZE] Database service initialized");
     } catch (error) {
-      console.log("[SEQUELIZE] Error during database service initialization");
+      logger.error(error, "[SEQUELIZE] Error during database service initialization");
       throw error;
     }
   },

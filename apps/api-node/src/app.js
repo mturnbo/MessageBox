@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
 import { validateEnv } from "./config/validateEnv.js";
 import expressService from "./services/express.service.js";
+import logger from "./config/logger.js";
 
 dotenv.config();
 validateEnv();
@@ -9,7 +10,7 @@ validateEnv();
   try {
     await expressService.init();
   } catch (error) {
-    console.log(error);
-    process.exit(1);
+    logger.error(error);
+    logger.flush(() => process.exit(1));
   }
 })();

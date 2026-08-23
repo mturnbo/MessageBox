@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+import logger from './logger.js';
 
 dotenv.config();
 
@@ -17,7 +18,7 @@ export function validateEnv() {
       .forEach(v => missing.push(v));
   }
   if (missing.length) {
-    missing.forEach(v => console.error(`[CONFIG] Missing required env var: ${v}`));
-    process.exit(1);
+    missing.forEach(v => logger.error(`[CONFIG] Missing required env var: ${v}`));
+    logger.flush(() => process.exit(1));
   }
 }

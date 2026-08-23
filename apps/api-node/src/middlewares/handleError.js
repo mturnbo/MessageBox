@@ -1,9 +1,10 @@
 import { CustomError } from './customError.js';
 import { DatabaseError } from './databaseError.js';
 import { IsApiError } from '#utils/ApiErrors.js';
+import logger from '#config/logger.js';
 
 export const handleDatabaseError = (error, operation) => {
-    console.error(`Database error during ${operation}:`, error);
+    logger.error(error, `Database error during ${operation}`);
 
     const errorMap = {
         'ECONNREFUSED': {
