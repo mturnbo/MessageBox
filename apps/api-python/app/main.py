@@ -1,5 +1,6 @@
 import os
 import sys
+from uuid import uuid4
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -7,12 +8,16 @@ load_dotenv()
 from app.config import validate_env
 validate_env()
 
+from app.logging_config import configure_logging, RequestLoggingMiddleware
+configure_logging()
+
 from fastapi import FastAPI, APIRouter, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.routers import auth, users, messages, health, refresh
 from fastapi.middleware.cors import CORSMiddleware
+from asgi_correlation_id import CorrelationIdMiddleware
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from app.limiter import limiter
@@ -49,6 +54,8 @@ async def rate_limit_exception_handler(request: Request, exc: RateLimitExceeded)
 
 app.state.limiter = limiter
 app.add_middleware(SlowAPIMiddleware)
+app.add_middleware(RequestLoggingMiddleware)
+app.add_middleware(CorrelationIdMiddleware, header_name="X-Request-ID", generator=lambda: str(uuid4()))
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -69,7 +76,7 @@ app.include_router(v1_router)
 def main():
     import uvicorn
     port = int(os.getenv("PORT", "8000"))
-    uvicorn.run("app.main:app", host="127.0.0.1", port=port)
+    uvicorn.run("app.main:app", host="127.0.0.1", port=port, access_log=False)
 
 if __name__ == "__main__":
     main()
