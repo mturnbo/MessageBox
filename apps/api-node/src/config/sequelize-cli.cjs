@@ -1,6 +1,9 @@
 const dotenv = require('dotenv');
+const pino = require('pino');
 
 dotenv.config();
+
+const logger = pino();
 
 const shared = {
   username: process.env.DB_USER,
@@ -8,7 +11,7 @@ const shared = {
   database: process.env.DB_DATABASE,
   host: process.env.DB_HOST,
   dialect: process.env.DB_TYPE,
-  logging: console.log,
+  logging: (msg) => logger.debug(msg),
 };
 
 module.exports = {

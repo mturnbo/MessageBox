@@ -3,9 +3,11 @@ import cors from 'cors';
 import helmet from 'helmet';
 import path from 'path';
 import cookieParser from 'cookie-parser';
-import logger from 'morgan';
+import pinoHttp from 'pino-http';
+import { randomUUID } from 'crypto';
 import swaggerUi from 'swagger-ui-express';
 import swaggerSpec from '#config/swagger.js';
+import logger from '#config/logger.js';
 
 import indexRouter from '#routes/index.routes.js';
 import authRouter from '#routes/auth.routes.js';
@@ -15,7 +17,6 @@ import healthRouter from '#routes/health.routes.js';
 
 import { notFound } from '#middlewares/notFound.js';
 import { handleError } from '#middlewares/handleError.js';
-import fs from 'fs';
 
 const __dirname = path.resolve();
 
@@ -29,7 +30,14 @@ const corsOptions = {
   optionsSuccessStatus: 204,
 };
 
-const accessLogStream = fs.createWriteStream(path.join(__dirname, 'logs', 'access.log'), { flags: 'a' })
+const httpLogger = pinoHttp({
+  logger,
+  genReqId: (req, res) => {
+    const id = req.headers['x-request-id'] || randomUUID();
+    res.setHeader('X-Request-Id', id);
+    return id;
+  },
+});
 
 const expressService = {
   init: async () => {
@@ -37,7 +45,7 @@ const expressService = {
       // config server
       server = express();
       server.use(helmet());
-      server.use(logger('combined', { stream: accessLogStream }));
+      server.use(httpLogger);
       server.use(express.json());
       server.use(express.urlencoded({ extended: false }));
       server.use(cookieParser());
@@ -63,9 +71,9 @@ const expressService = {
 
       // start server
       server.listen(process.env.SERVER_PORT || 3000);
-      console.log("[EXPRESS] Express initialized");
+      logger.info("[EXPRESS] Express initialized");
     } catch (error) {
-      console.log("[EXPRESS] Error during express service initialization");
+      logger.error(error, "[EXPRESS] Error during express service initialization");
       throw error;
     }
   },
