@@ -1,3 +1,6 @@
+import logging
+from logging.handlers import TimedRotatingFileHandler
+
 import pytest
 import structlog
 from asgi_correlation_id import correlation_id
@@ -99,21 +102,54 @@ def test_add_correlation_id_absent():
         correlation_id.reset(token)
 
 
-def test_configure_logging_uses_json_renderer_in_production(monkeypatch):
-    monkeypatch.setenv("ENV", "production")
-    try:
+@pytest.fixture
+def app_logger_handlers(monkeypatch, tmp_path):
+    def configure(env):
+        monkeypatch.setenv("ENV", env)
+        monkeypatch.setenv("LOG_DIR", str(tmp_path))
         configure_logging()
-        renderer = structlog.get_config()["processors"][-1]
-        assert isinstance(renderer, structlog.processors.JSONRenderer)
-    finally:
-        configure_logging()
+        return logging.getLogger("app").handlers
 
+    yield configure
 
-def test_configure_logging_uses_console_renderer_in_development(monkeypatch):
-    monkeypatch.setenv("ENV", "development")
+    # Reset before monkeypatch reverts ENV/LOG_DIR, so no handler is left
+    # pointing at this test's (about to be removed) tmp_path.
+    monkeypatch.setenv("ENV", "test")
     configure_logging()
-    renderer = structlog.get_config()["processors"][-1]
-    assert isinstance(renderer, structlog.dev.ConsoleRenderer)
+
+
+def test_configure_logging_uses_json_renderer_in_production(app_logger_handlers):
+    handlers = app_logger_handlers("production")
+
+    assert len(handlers) == 1
+    file_handler = handlers[0]
+    assert isinstance(file_handler, TimedRotatingFileHandler)
+    assert isinstance(file_handler.formatter.processors[-1], structlog.processors.JSONRenderer)
+
+
+def test_configure_logging_uses_console_renderer_in_development(app_logger_handlers):
+    handlers = app_logger_handlers("development")
+
+    assert len(handlers) == 2
+    file_handler, console_handler = handlers
+    assert isinstance(file_handler, TimedRotatingFileHandler)
+    assert isinstance(file_handler.formatter.processors[-1], structlog.processors.JSONRenderer)
+    assert isinstance(console_handler, logging.StreamHandler)
+    assert isinstance(console_handler.formatter.processors[-1], structlog.dev.ConsoleRenderer)
+
+
+def test_configure_logging_rotates_daily(app_logger_handlers, tmp_path):
+    file_handler = app_logger_handlers("production")[0]
+
+    assert file_handler.when == "MIDNIGHT"
+    assert file_handler.baseFilename == str(tmp_path / "app.log")
+
+
+def test_configure_logging_skips_handlers_in_test_env(app_logger_handlers, tmp_path):
+    handlers = app_logger_handlers("test")
+
+    assert handlers == []
+    assert not (tmp_path / "app.log").exists()
 
 
 def test_request_logging_middleware_logs_completed_request(client):

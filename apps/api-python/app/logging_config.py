@@ -3,10 +3,14 @@ import os
 import sys
 import time
 from dataclasses import dataclass
+from logging.handlers import TimedRotatingFileHandler
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import structlog
 from asgi_correlation_id import correlation_id
+
+DEFAULT_LOG_DIR = Path(__file__).resolve().parent.parent / "logs"
 
 if TYPE_CHECKING:
     from starlette.types import ASGIApp, Message, Receive, Scope, Send
@@ -58,6 +62,7 @@ def add_correlation_id(logger, method_name, event_dict):
 def configure_logging() -> None:
     env = os.getenv("ENV", "development")
     is_production = env == "production"
+    is_test = env == "test"
     level_name = os.getenv("LOG_LEVEL", "INFO").upper()
     level = logging.getLevelNamesMapping().get(level_name, logging.INFO)
 
@@ -70,14 +75,35 @@ def configure_logging() -> None:
         structlog.processors.format_exc_info,
     ]
 
-    renderer = structlog.processors.JSONRenderer() if is_production else structlog.dev.ConsoleRenderer()
-
     structlog.configure(
-        processors=[*shared_processors, renderer],
+        processors=[*shared_processors, structlog.stdlib.ProcessorFormatter.wrap_for_formatter],
         wrapper_class=structlog.make_filtering_bound_logger(level),
-        logger_factory=structlog.PrintLoggerFactory(file=sys.stdout),
+        logger_factory=structlog.stdlib.LoggerFactory(),
         cache_logger_on_first_use=True,
     )
+
+    app_logger = logging.getLogger("app")
+    app_logger.setLevel(level)
+    app_logger.propagate = False
+    for handler in list(app_logger.handlers):
+        app_logger.removeHandler(handler)
+
+    if is_test:
+        return
+
+    log_dir = Path(os.getenv("LOG_DIR", DEFAULT_LOG_DIR))
+    log_dir.mkdir(parents=True, exist_ok=True)
+
+    file_handler = TimedRotatingFileHandler(log_dir / "app.log", when="midnight", encoding="utf-8")
+    file_handler.setFormatter(structlog.stdlib.ProcessorFormatter(processor=structlog.processors.JSONRenderer()))
+    app_logger.addHandler(file_handler)
+
+    if not is_production:
+        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler.setFormatter(
+            structlog.stdlib.ProcessorFormatter(processor=structlog.dev.ConsoleRenderer())
+        )
+        app_logger.addHandler(console_handler)
 
 
 request_logger = structlog.get_logger("app.request")
