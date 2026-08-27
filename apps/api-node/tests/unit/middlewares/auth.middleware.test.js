@@ -32,14 +32,14 @@ describe('authMiddleware', () => {
     expect(next).not.toHaveBeenCalled();
   });
 
-  it('returns 403 for an invalid or expired token', () => {
+  it('returns 401 for an invalid or expired token', () => {
     const req = { headers: { authorization: 'Bearer not.a.valid.token' } };
     const res = makeRes();
     const next = jest.fn();
 
     authMiddleware(req, res, next);
 
-    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.status).toHaveBeenCalledWith(401);
     expect(res.json).toHaveBeenCalledWith({ error: { message: 'Invalid or expired token' } });
     expect(next).not.toHaveBeenCalled();
   });
@@ -56,7 +56,7 @@ describe('authMiddleware', () => {
     expect(req.user.username).toBe('alice');
   });
 
-  it('returns 403 when a refresh token is used as an access token', () => {
+  it('returns 401 when a refresh token is used as an access token', () => {
     const refreshToken = jwt.sign({ username: 'alice', type: 'refresh' }, SECRET, { expiresIn: '7d' });
     const req = { headers: { authorization: `Bearer ${refreshToken}` } };
     const res = makeRes();
@@ -64,7 +64,7 @@ describe('authMiddleware', () => {
 
     authMiddleware(req, res, next);
 
-    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.status).toHaveBeenCalledWith(401);
     expect(res.json).toHaveBeenCalledWith({ error: { message: 'Invalid or expired token' } });
     expect(next).not.toHaveBeenCalled();
   });
