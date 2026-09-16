@@ -34,6 +34,19 @@ module.exports = {
       },
     },
     {
+      name: 'api-go',
+      script: './api-go/bin/messagebox-api-go',
+      interpreter: 'none',
+      cwd: `${__dirname}`,
+      instances: 1,
+      autorestart: true,
+      env: {
+        GIN_MODE: 'release',
+        SERVER_PORT: 3001,
+        ORIGIN: 4000,
+      },
+    },
+    {
       // Angular dev server — ng serve handles its own HMR, do not set watch: true
       name: 'messagebox-frontend-angular',
       cwd: `${__dirname}/frontend-angular`,
