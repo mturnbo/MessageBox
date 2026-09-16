@@ -10,8 +10,8 @@ type User struct {
 	FirstName     string     `gorm:"column:first_name;not null"        json:"firstName"`
 	LastName      string     `gorm:"column:last_name;not null"         json:"lastName"`
 	DeviceAddress *string    `gorm:"column:device_address"             json:"deviceAddress"`
-	DateCreated   time.Time  `gorm:"column:date_created;autoCreateTime" json:"dateCreated"`
-	LastLogin     *time.Time `gorm:"column:last_login"                 json:"lastLogin"`
+	DateCreated   time.Time  `gorm:"column:created_at;autoCreateTime" json:"dateCreated"`
+	LastLogin     *time.Time `gorm:"column:last_seen"                 json:"lastLogin"`
 }
 
 func (User) TableName() string { return "users" }
@@ -36,7 +36,7 @@ func (Message) TableName() string { return "messages" }
 type Thread struct {
 	ID          uint      `gorm:"primaryKey;autoIncrement"                json:"id"`
 	OriginMsg   uint      `gorm:"column:origin_msg;uniqueIndex;not null"  json:"originMsg"`
-	DateCreated time.Time `gorm:"column:date_created;autoCreateTime"      json:"dateCreated"`
+	DateCreated time.Time `gorm:"column:created_at;autoCreateTime"      json:"dateCreated"`
 }
 
 func (Thread) TableName() string { return "threads" }

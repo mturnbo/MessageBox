@@ -13,8 +13,8 @@ import (
 
 func GetUsers(c *gin.Context) {
 	var limit, page int
-	if c.Param("limit") != "" {
-		limit, _ = strconv.Atoi(c.Param("limit"))
+	if c.Param("id") != "" {
+		limit, _ = strconv.Atoi(c.Param("id"))
 		page, _ = strconv.Atoi(c.Param("page"))
 	} else {
 		limit, _ = strconv.Atoi(c.DefaultQuery("limit", "10"))
@@ -123,7 +123,12 @@ func UpdateUser(c *gin.Context) {
 }
 
 func DeleteUser(c *gin.Context) {
-	result := database.DB.Delete(&models.User{}, c.Param("id"))
+	userID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid id"})
+		return
+	}
+	result := database.DB.Delete(&models.User{}, "id = ?", userID)
 	if result.RowsAffected == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"message": "User not found"})
 		return

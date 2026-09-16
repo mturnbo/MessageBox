@@ -51,8 +51,13 @@ func GetSent(c *gin.Context) {
 }
 
 func GetMessage(c *gin.Context) {
+	msgID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid id"})
+		return
+	}
 	var msg models.Message
-	if err := database.DB.First(&msg, c.Param("id")).Error; err != nil {
+	if err := database.DB.First(&msg, "id = ?", msgID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Message not found"})
 		return
 	}
@@ -60,8 +65,13 @@ func GetMessage(c *gin.Context) {
 }
 
 func GetThread(c *gin.Context) {
+	originID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid id"})
+		return
+	}
 	var thread models.Thread
-	if err := database.DB.Where("origin_msg = ?", c.Param("id")).First(&thread).Error; err != nil {
+	if err := database.DB.Where("origin_msg = ?", originID).First(&thread).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Thread not found"})
 		return
 	}
