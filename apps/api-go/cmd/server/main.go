@@ -43,7 +43,7 @@ func main() {
 
 	users := v1.Group("/users", middleware.RequireAuth())
 	users.GET("", handlers.GetUsers)
-	users.GET("/:limit/:page", handlers.GetUsers)
+	users.GET("/:id/:page", handlers.GetUsers)
 	users.GET("/:id", handlers.GetUser)
 	users.POST("/register", handlers.CreateUser)
 	users.POST("/update", handlers.UpdateUser)

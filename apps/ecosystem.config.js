@@ -35,14 +35,14 @@ module.exports = {
     },
     {
       name: 'api-go',
-      script: './api-go/bin/messagebox-api-go',
+      script: './bin/messagebox-api-go',
       interpreter: 'none',
-      cwd: `${__dirname}`,
+      cwd: `${__dirname}/api-go`,
       instances: 1,
       autorestart: true,
       env: {
         GIN_MODE: 'release',
-        SERVER_PORT: 3001,
+        SERVER_PORT: 3000,
         ORIGIN: 4000,
       },
     },
