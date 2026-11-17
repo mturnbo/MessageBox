@@ -7,6 +7,7 @@ from app.database import get_session
 from app.limiter import limiter
 from app.main import app
 from app.models.dbmodels import Message, User
+from app.routers import auth as auth_router
 from app.utilites.password import (
     create_access_token,
     create_refresh_token,
@@ -88,6 +89,66 @@ def test_auth_wrong_password(client, session):
 def test_auth_unknown_user(client, session):
     resp = client.post("/v1/auth", json={"username": "ghost", "password": "x"})
     assert resp.status_code == 401
+
+
+def spy_compare_password(monkeypatch):
+    calls = []
+    original_compare_password = auth_router.compare_password
+
+    def spy(password, hashed_password):
+        calls.append((password, hashed_password))
+        return original_compare_password(password, hashed_password)
+
+    monkeypatch.setattr(auth_router, "compare_password", spy)
+    return calls
+
+
+def test_auth_unknown_user_same_response_as_wrong_password(client, session):
+    make_user(session)
+    wrong_password = client.post("/v1/auth", json={"username": "alice", "password": "wrong"})
+    unknown_user = client.post("/v1/auth", json={"username": "ghost", "password": "wrong"})
+    assert unknown_user.status_code == wrong_password.status_code == 401
+    assert unknown_user.json() == wrong_password.json()
+
+
+def test_auth_unknown_user_runs_bcrypt_against_dummy_hash(client, session, monkeypatch):
+    calls = spy_compare_password(monkeypatch)
+    resp = client.post("/v1/auth", json={"username": "ghost", "password": "x"})
+    assert resp.status_code == 401
+    assert calls == [("x", auth_router.DUMMY_PASSWORD_HASH)]
+
+
+def test_auth_unknown_email_runs_bcrypt_against_dummy_hash(client, session, monkeypatch):
+    make_user(session)
+    calls = spy_compare_password(monkeypatch)
+    resp = client.post("/v1/auth", json={"username": "ghost@example.com", "password": "x"})
+    assert resp.status_code == 401
+    assert calls == [("x", auth_router.DUMMY_PASSWORD_HASH)]
+
+
+def test_auth_unknown_user_with_empty_password_runs_bcrypt(client, session, monkeypatch):
+    calls = spy_compare_password(monkeypatch)
+    resp = client.post("/v1/auth", json={"username": "", "password": ""})
+    assert resp.status_code == 401
+    assert calls == [("", auth_router.DUMMY_PASSWORD_HASH)]
+
+
+def test_auth_existing_user_compares_against_real_hash_only(client, session, monkeypatch):
+    user = make_user(session)
+    calls = spy_compare_password(monkeypatch)
+    resp = client.post("/v1/auth", json={"username": "alice", "password": "wrong"})
+    assert resp.status_code == 401
+    assert calls == [("wrong", user.password_hash)]
+
+
+def test_auth_dummy_password_never_authenticates(client, session):
+    resp = client.post("/v1/auth", json={"username": "ghost", "password": "dummy-password-for-timing-equalization"})
+    assert resp.status_code == 401
+
+
+def test_dummy_hash_uses_same_bcrypt_cost_as_real_hashes():
+    real_hash = generate_hashed_password("secret")
+    assert auth_router.DUMMY_PASSWORD_HASH[:7] == real_hash[:7]
 
 
 def test_auth_with_email(client, session):
