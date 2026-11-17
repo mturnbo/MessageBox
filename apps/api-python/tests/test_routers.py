@@ -8,7 +8,9 @@ from app.main import app
 from app.database import get_session
 from app.limiter import limiter
 from app.models.dbmodels import User, Message
-from app.utilites.password import generate_hashed_password, create_access_token
+from app.utilites.password import generate_hashed_password, create_access_token, create_refresh_token, decode_token, token_claims
+
+_current_session = None
 
 
 @pytest.fixture(name="session")
@@ -19,8 +21,11 @@ def session_fixture():
         poolclass=StaticPool,
     )
     SQLModel.metadata.create_all(engine)
+    global _current_session
     with Session(engine) as session:
+        _current_session = session
         yield session
+    _current_session = None
 
 
 @pytest.fixture(name="client")
@@ -50,7 +55,8 @@ def make_user(session, username="alice", email="alice@example.com", password="se
 
 
 def auth_headers(username="alice"):
-    token = create_access_token({"sub": username})
+    user = _current_session.exec(select(User).where(User.username == username)).one()
+    token = create_access_token(token_claims(user))
     return {"Authorization": f"Bearer {token}"}
 
 
@@ -135,6 +141,162 @@ def test_refresh_token_rejected_as_access_token(client, session):
     assert resp.status_code == 401
 
 
+# ── Token identity ────────────────────────────────────────────────────────────
+
+def test_auth_token_subject_is_user_id(client, session):
+    user = make_user(session)
+    login = client.post("/v1/auth", json={"username": "alice", "password": "secret"})
+    assert decode_token(login.json()["token"])["sub"] == str(user.id)
+    assert decode_token(login.json()["refreshToken"])["sub"] == str(user.id)
+
+
+def test_legacy_username_subject_token_rejected(client, session):
+    make_user(session)
+    token = create_access_token({"sub": "alice"})
+    resp = client.get("/v1/users/", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 401
+
+
+def test_token_without_subject_rejected(client, session):
+    make_user(session)
+    token = create_access_token({})
+    resp = client.get("/v1/users/", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 401
+
+
+def test_deleted_user_token_rejected(client, session):
+    user = make_user(session)
+    headers = auth_headers()
+    session.delete(user)
+    session.commit()
+    resp = client.get("/v1/users/", headers=headers)
+    assert resp.status_code == 401
+
+
+def test_deleted_user_token_does_not_authenticate_new_user_with_same_username(client, session):
+    old_alice = make_user(session)
+    make_user(session, username="bob", email="bob@example.com")
+    old_headers = auth_headers()
+    session.delete(old_alice)
+    session.commit()
+    new_alice = make_user(session)
+    assert new_alice.id != old_alice.id
+    resp = client.post(
+        "/v1/users/update",
+        headers=old_headers,
+        json={"id": new_alice.id, "userUpdate": {"firstName": "Hijacked"}},
+    )
+    assert resp.status_code == 401
+    session.refresh(new_alice)
+    assert new_alice.first_name == "Alice"
+
+
+def test_token_survives_username_change(client, session):
+    user = make_user(session)
+    headers = auth_headers()
+    resp = client.post(
+        "/v1/users/update",
+        headers=headers,
+        json={"id": user.id, "userUpdate": {"username": "alice2"}},
+    )
+    assert resp.status_code == 200
+    resp = client.get("/v1/users/", headers=headers)
+    assert resp.status_code == 200
+
+
+def test_refresh_rejected_for_deleted_user(client, session):
+    user = make_user(session)
+    refresh_token = create_refresh_token(token_claims(user))
+    session.delete(user)
+    session.commit()
+    resp = client.post("/v1/auth/refresh", json={"refreshToken": refresh_token})
+    assert resp.status_code == 401
+
+
+def test_refresh_rejects_legacy_username_subject(client, session):
+    make_user(session)
+    refresh_token = create_refresh_token({"sub": "alice"})
+    resp = client.post("/v1/auth/refresh", json={"refreshToken": refresh_token})
+    assert resp.status_code == 401
+
+
+def test_password_change_revokes_access_token(client, session):
+    user = make_user(session)
+    headers = auth_headers()
+    resp = client.post(
+        "/v1/users/update",
+        headers=headers,
+        json={"id": user.id, "userUpdate": {"password": "new-secret"}},
+    )
+    assert resp.status_code == 200
+    resp = client.get("/v1/users/", headers=headers)
+    assert resp.status_code == 401
+
+
+def test_password_change_revokes_refresh_token(client, session):
+    user = make_user(session)
+    refresh_token = create_refresh_token(token_claims(user))
+    client.post(
+        "/v1/users/update",
+        headers=auth_headers(),
+        json={"id": user.id, "userUpdate": {"password": "new-secret"}},
+    )
+    resp = client.post("/v1/auth/refresh", json={"refreshToken": refresh_token})
+    assert resp.status_code == 401
+
+
+def test_login_after_password_change_issues_working_token(client, session):
+    user = make_user(session)
+    client.post(
+        "/v1/users/update",
+        headers=auth_headers(),
+        json={"id": user.id, "userUpdate": {"password": "new-secret"}},
+    )
+    login = client.post("/v1/auth", json={"username": "alice", "password": "new-secret"})
+    token = login.json()["token"]
+    resp = client.get("/v1/users/", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 200
+
+
+def test_non_password_update_keeps_token_valid(client, session):
+    user = make_user(session)
+    headers = auth_headers()
+    client.post(
+        "/v1/users/update",
+        headers=headers,
+        json={"id": user.id, "userUpdate": {"firstName": "Alicia"}},
+    )
+    resp = client.get("/v1/users/", headers=headers)
+    assert resp.status_code == 200
+
+
+def test_token_without_password_fingerprint_rejected(client, session):
+    user = make_user(session)
+    token = create_access_token({"sub": str(user.id)})
+    resp = client.get("/v1/users/", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 401
+
+
+def test_reused_user_id_does_not_accept_old_token(client, session):
+    old_alice = make_user(session)
+    old_headers = auth_headers()
+    session.delete(old_alice)
+    session.commit()
+    new_user = make_user(session, username="mallory", email="mallory@example.com", password="other")
+    assert new_user.id == old_alice.id
+    resp = client.get("/v1/users/", headers=old_headers)
+    assert resp.status_code == 401
+
+
+def test_refreshed_access_token_authenticates_same_user(client, session):
+    user = make_user(session)
+    refresh_token = create_refresh_token(token_claims(user))
+    token = client.post("/v1/auth/refresh", json={"refreshToken": refresh_token}).json()["token"]
+    assert decode_token(token)["sub"] == str(user.id)
+    resp = client.get("/v1/users/", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 200
+
+
 # ── GET /users/ ───────────────────────────────────────────────────────────────
 
 def test_get_all_users_returns_list(client, session):
@@ -169,7 +331,7 @@ def test_get_all_users_invalid_token(client):
 def test_get_all_users_limit(client, session):
     for i in range(5):
         make_user(session, username=f"user{i}", email=f"user{i}@example.com")
-    resp = client.get("/v1/users/?limit=3", headers=auth_headers())
+    resp = client.get("/v1/users/?limit=3", headers=auth_headers("user0"))
     assert resp.status_code == 200
     assert len(resp.json()) == 3
 
@@ -177,7 +339,7 @@ def test_get_all_users_limit(client, session):
 def test_get_all_users_offset(client, session):
     for i in range(5):
         make_user(session, username=f"user{i}", email=f"user{i}@example.com")
-    resp = client.get("/v1/users/?offset=3", headers=auth_headers())
+    resp = client.get("/v1/users/?offset=3", headers=auth_headers("user0"))
     assert resp.status_code == 200
     assert len(resp.json()) == 2
 
@@ -214,7 +376,8 @@ def test_get_user_returns_camel_case(client, session):
     assert "deviceAddress" in body
 
 
-def test_get_user_by_id_not_found(client):
+def test_get_user_by_id_not_found(client, session):
+    make_user(session)
     resp = client.get("/v1/users/9999", headers=auth_headers())
     assert resp.status_code == 404
     assert resp.json() == {"error": {"message": "User not found"}}
@@ -234,7 +397,8 @@ def test_get_user_no_password_hash(client, session):
 
 # ── POST /users/register ──────────────────────────────────────────────────────
 
-def test_register_new_user(client):
+def test_register_new_user(client, session):
+    make_user(session)
     resp = client.post(
         "/v1/users/register",
         headers=auth_headers(),
@@ -301,7 +465,7 @@ def test_register_requires_auth(client):
 def test_get_all_users_path_pagination_page1(client, session):
     for i in range(5):
         make_user(session, username=f"user{i}", email=f"user{i}@example.com")
-    resp = client.get("/v1/users/3/1", headers=auth_headers())
+    resp = client.get("/v1/users/3/1", headers=auth_headers("user0"))
     assert resp.status_code == 200
     assert len(resp.json()) == 3
 
@@ -309,7 +473,7 @@ def test_get_all_users_path_pagination_page1(client, session):
 def test_get_all_users_path_pagination_page2(client, session):
     for i in range(5):
         make_user(session, username=f"user{i}", email=f"user{i}@example.com")
-    resp = client.get("/v1/users/3/2", headers=auth_headers())
+    resp = client.get("/v1/users/3/2", headers=auth_headers("user0"))
     assert resp.status_code == 200
     assert len(resp.json()) == 2
 
@@ -355,10 +519,11 @@ def test_update_user_requires_auth(client, session):
 
 def test_delete_user(client, session):
     user = make_user(session)
+    make_user(session, username="bob", email="bob@example.com")
     resp = client.delete(f"/v1/users/delete/{user.id}", headers=auth_headers())
     assert resp.status_code == 200
     assert resp.json()["username"] == "alice"
-    resp2 = client.get(f"/v1/users/{user.id}", headers=auth_headers())
+    resp2 = client.get(f"/v1/users/{user.id}", headers=auth_headers("bob"))
     assert resp2.status_code == 404
 
 

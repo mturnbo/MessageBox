@@ -7,7 +7,7 @@ from sqlmodel import Session, select
 from app.models.dbmodels import User, UserOut, UserPublic, UserUpdateRequest
 from app.models.newuser import NewUser
 from app.database import get_session
-from app.utilites.password import verify_token, generate_hashed_password, get_current_user
+from app.utilites.password import generate_hashed_password, get_current_user
 from app.limiter import limiter, API_RATE_LIMIT
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -34,7 +34,7 @@ def _user_out(user: User) -> UserOut:
 def get_all_users(
         request: Request,
         session: Session = Depends(get_session),
-        username: str = Depends(verify_token),
+        current_user: User = Depends(get_current_user),
         offset: int = 0,
         limit: int = Query(default=100, le=MAX_LIMIT)
 ):
@@ -49,7 +49,7 @@ def get_all_users_paginated(
     limit: int = Path(ge=1, le=MAX_LIMIT),
     page: int = Path(ge=1),
     session: Session = Depends(get_session),
-    username: str = Depends(verify_token),
+    current_user: User = Depends(get_current_user),
 ):
     offset = (page - 1) * limit
     users = session.exec(select(User).offset(offset).limit(limit)).all()
@@ -62,7 +62,7 @@ def get_user(
     request: Request,
     user_id: str,
     session: Session = Depends(get_session),
-    username: str = Depends(verify_token),
+    current_user: User = Depends(get_current_user),
 ):
     try:
         uid = int(user_id)
@@ -84,7 +84,7 @@ def create_user(
     request: Request,
     user_data: NewUser,
     session: Session = Depends(get_session),
-    username: str = Depends(verify_token),
+    current_user: User = Depends(get_current_user),
 ):
     if session.exec(select(User).where(User.username == user_data.username)).first():
         raise HTTPException(status_code=400, detail="Username already exists")
