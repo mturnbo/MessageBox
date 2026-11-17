@@ -114,6 +114,11 @@ def reply_to_message(
 ):
     if current_user.id != payload.sender_id:
         raise HTTPException(status_code=403, detail="Forbidden")
+    parent = message_service.get_message_by_id(session, payload.reply_to_id)
+    if not parent:
+        raise HTTPException(status_code=404, detail="Message not found")
+    if current_user.id not in (parent.sender_id, parent.recipient_id):
+        raise HTTPException(status_code=403, detail="Forbidden")
     idempotency_key = request.headers.get("idempotency-key")
     message, thread_id, reply_to, replayed = message_service.reply_to_message(
         session, payload, idempotency_key
