@@ -414,7 +414,7 @@ def test_register_new_user(client, session):
         headers=auth_headers(),
         json={
             "username": "newuser",
-            "password": "pw123",
+            "password": "password123",
             "first_name": "New",
             "last_name": "User",
             "email": "new@example.com",
@@ -431,7 +431,7 @@ def test_register_duplicate_username(client, session):
         headers=auth_headers(),
         json={
             "username": "alice",
-            "password": "pw",
+            "password": "password123",
             "first_name": "A",
             "last_name": "B",
             "email": "other@example.com",
@@ -447,7 +447,7 @@ def test_register_duplicate_email(client, session):
         headers=auth_headers(),
         json={
             "username": "other",
-            "password": "pw",
+            "password": "password123",
             "first_name": "A",
             "last_name": "B",
             "email": "alice@example.com",
@@ -461,13 +461,93 @@ def test_register_requires_auth(client):
         "/v1/users/register",
         json={
             "username": "u",
-            "password": "p",
+            "password": "password123",
             "first_name": "F",
             "last_name": "L",
             "email": "u@example.com",
         },
     )
     assert resp.status_code == 401
+
+
+def register_payload(**overrides):
+    payload = {
+        "username": "newuser",
+        "password": "password123",
+        "first_name": "New",
+        "last_name": "User",
+        "email": "new@example.com",
+    }
+    payload.update(overrides)
+    return payload
+
+
+def test_register_stores_valid_email(client, session):
+    make_user(session)
+    resp = client.post("/v1/users/register", headers=auth_headers(), json=register_payload())
+    assert resp.status_code == 201
+    assert resp.json()["email"] == "new@example.com"
+
+
+@pytest.mark.parametrize("email", ["not-an-email", "missing-at.example.com", "user@", "@example.com", ""])
+def test_register_invalid_email_rejected(client, session, email):
+    make_user(session)
+    resp = client.post("/v1/users/register", headers=auth_headers(), json=register_payload(email=email))
+    assert resp.status_code == 422
+    assert session.exec(select(User).where(User.username == "newuser")).first() is None
+
+
+@pytest.mark.parametrize("password", ["", "1234567"])
+def test_register_short_password_rejected(client, session, password):
+    make_user(session)
+    resp = client.post("/v1/users/register", headers=auth_headers(), json=register_payload(password=password))
+    assert resp.status_code == 422
+
+
+def test_register_password_min_length_accepted(client, session):
+    make_user(session)
+    resp = client.post("/v1/users/register", headers=auth_headers(), json=register_payload(password="12345678"))
+    assert resp.status_code == 201
+
+
+def test_register_password_72_bytes_accepted(client, session):
+    make_user(session)
+    resp = client.post("/v1/users/register", headers=auth_headers(), json=register_payload(password="a" * 72))
+    assert resp.status_code == 201
+
+
+def test_register_password_73_bytes_rejected(client, session):
+    make_user(session)
+    resp = client.post("/v1/users/register", headers=auth_headers(), json=register_payload(password="a" * 73))
+    assert resp.status_code == 422
+
+
+def test_register_multibyte_password_72_bytes_accepted(client, session):
+    make_user(session)
+    password = "é" * 36
+    assert len(password.encode("utf-8")) == 72
+    resp = client.post("/v1/users/register", headers=auth_headers(), json=register_payload(password=password))
+    assert resp.status_code == 201
+
+
+def test_register_multibyte_password_over_72_bytes_rejected(client, session):
+    make_user(session)
+    password = "é" * 36 + "a"
+    assert len(password) == 37
+    assert len(password.encode("utf-8")) == 73
+    resp = client.post("/v1/users/register", headers=auth_headers(), json=register_payload(password=password))
+    assert resp.status_code == 422
+
+
+def test_register_rate_limit_uses_auth_limit(client, session):
+    make_user(session)
+    headers = auth_headers()
+    limit = int(__import__("os").getenv("AUTH_RATE_LIMIT_MAX", "10"))
+    for i in range(limit):
+        resp = client.post("/v1/users/register", headers=headers, json=register_payload())
+        assert resp.status_code != 429, f"request {i + 1} blocked too early"
+    resp = client.post("/v1/users/register", headers=headers, json=register_payload())
+    assert resp.status_code == 429
 
 
 # ── GET /users/{limit}/{page} ─────────────────────────────────────────────────
@@ -525,6 +605,54 @@ def test_update_user_requires_auth(client, session):
     user = make_user(session)
     resp = client.post("/v1/users/update", json={"id": user.id, "userUpdate": {}})
     assert resp.status_code == 401
+
+
+def test_update_user_invalid_email_rejected(client, session):
+    user = make_user(session)
+    resp = client.post(
+        "/v1/users/update",
+        headers=auth_headers(),
+        json={"id": user.id, "userUpdate": {"email": "not-an-email"}},
+    )
+    assert resp.status_code == 422
+    session.refresh(user)
+    assert user.email == "alice@example.com"
+
+
+def test_update_user_valid_email_accepted(client, session):
+    user = make_user(session)
+    resp = client.post(
+        "/v1/users/update",
+        headers=auth_headers(),
+        json={"id": user.id, "userUpdate": {"email": "alice2@example.com"}},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["email"] == "alice2@example.com"
+
+
+@pytest.mark.parametrize("password", ["", "1234567", "a" * 73, "é" * 36 + "a"])
+def test_update_user_invalid_password_rejected(client, session, password):
+    user = make_user(session)
+    old_hash = user.password_hash
+    resp = client.post(
+        "/v1/users/update",
+        headers=auth_headers(),
+        json={"id": user.id, "userUpdate": {"password": password}},
+    )
+    assert resp.status_code == 422
+    session.refresh(user)
+    assert user.password_hash == old_hash
+
+
+@pytest.mark.parametrize("password", ["12345678", "a" * 72, "é" * 36])
+def test_update_user_boundary_password_accepted(client, session, password):
+    user = make_user(session)
+    resp = client.post(
+        "/v1/users/update",
+        headers=auth_headers(),
+        json={"id": user.id, "userUpdate": {"password": password}},
+    )
+    assert resp.status_code == 200
 
 
 # ── DELETE /users/delete/{id} ─────────────────────────────────────────────────
