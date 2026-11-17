@@ -1,17 +1,18 @@
 import os
 import sys
+
 from dotenv import load_dotenv
 
 load_dotenv()
 
 _REQUIRED = [
-    ('MYSQL_USER',     'MySQL username'),
-    ('MYSQL_PASSWORD', 'MySQL password'),
-    ('MYSQL_DATABASE', 'MySQL database name'),
-    ('JWT_SECRET',     'JWT signing secret'),
+    ("MYSQL_USER", "MySQL username"),
+    ("MYSQL_PASSWORD", "MySQL password"),
+    ("MYSQL_DATABASE", "MySQL database name"),
+    ("JWT_SECRET", "JWT signing secret"),
 ]
 
-JWT_SECRET = os.getenv('JWT_SECRET')
+JWT_SECRET = os.getenv("JWT_SECRET")
 
 
 def validate_env():

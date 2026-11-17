@@ -1,14 +1,15 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
 from fastapi.security import HTTPBearer
-from typing import List
 from sqlalchemy import or_
 from sqlmodel import Session, select
-from app.models.dbmodels import User, UserOut, UserPublic, UserUpdateRequest
-from app.models.newuser import NewUser
+
 from app.database import get_session
+from app.limiter import API_RATE_LIMIT, limiter
+from app.models.dbmodels import User, UserOut, UserUpdateRequest
+from app.models.newuser import NewUser
 from app.utilites.password import generate_hashed_password, get_current_user
-from app.limiter import limiter, API_RATE_LIMIT
 
 router = APIRouter(prefix="/users", tags=["users"])
 security = HTTPBearer()
@@ -29,20 +30,20 @@ def _user_out(user: User) -> UserOut:
     )
 
 
-@router.get("/", response_model=List[UserOut])
+@router.get("/", response_model=list[UserOut])
 @limiter.limit(API_RATE_LIMIT)
 def get_all_users(
-        request: Request,
-        session: Session = Depends(get_session),
-        current_user: User = Depends(get_current_user),
-        offset: int = 0,
-        limit: int = Query(default=100, le=MAX_LIMIT)
+    request: Request,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+    offset: int = 0,
+    limit: int = Query(default=100, le=MAX_LIMIT),
 ):
     users = session.exec(select(User).offset(offset).limit(limit)).all()
     return [_user_out(u) for u in users]
 
 
-@router.get("/{limit}/{page}", response_model=List[UserOut])
+@router.get("/{limit}/{page}", response_model=list[UserOut])
 @limiter.limit(API_RATE_LIMIT)
 def get_all_users_paginated(
     request: Request,
@@ -99,7 +100,7 @@ def create_user(
         first_name=user_data.first_name,
         last_name=user_data.last_name,
         device_address=user_data.device_address,
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
     )
 
     session.add(new_user)

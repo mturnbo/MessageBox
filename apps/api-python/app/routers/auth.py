@@ -2,15 +2,17 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import HTTPBearer
 from sqlalchemy import or_
 from sqlmodel import Session, select
-from app.models.dbmodels import User
+
 from app.database import get_session
+from app.limiter import AUTH_RATE_LIMIT, limiter
+from app.models.auth_credentials import AuthCredentials
+from app.models.dbmodels import User
 from app.models.token import Token
 from app.utilites.password import compare_password, create_access_token, create_refresh_token, token_claims
-from app.models.auth_credentials import AuthCredentials
-from app.limiter import limiter, AUTH_RATE_LIMIT
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 security = HTTPBearer()
+
 
 @router.post("", response_model=Token)
 @limiter.limit(AUTH_RATE_LIMIT)

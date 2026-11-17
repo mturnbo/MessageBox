@@ -1,6 +1,7 @@
-from sqlmodel import Session, create_engine
-from dotenv import load_dotenv
 import os
+
+from dotenv import load_dotenv
+from sqlmodel import Session, create_engine
 
 # Environment variables for database connection
 load_dotenv()
@@ -13,6 +14,7 @@ MYSQL_DATABASE = os.getenv("MYSQL_DATABASE", "")
 DATABASE_URL = f"mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DATABASE}"
 
 engine = create_engine(DATABASE_URL, echo=True)
+
 
 def get_session():
     with Session(engine) as session:
