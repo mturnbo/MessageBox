@@ -902,16 +902,47 @@ def test_get_thread_forbidden_for_non_party(client, session, two_users):
 # ── POST /messages/read ───────────────────────────────────────────────────────
 
 
-def test_read_message(client, session, two_users):
+def test_read_message_by_recipient(client, session, two_users):
     alice, bob = two_users
     msg = make_message(session, alice.id, bob.id)
     resp = client.post(
         "/v1/messages/read",
-        headers=auth_headers(),
+        headers=auth_headers("bob"),
         json={"id": msg.id, "reader_address": "1.2.3.4"},
     )
     assert resp.status_code == 200
     assert resp.json()["status"] == "Message read successfully"
+    session.refresh(msg)
+    assert msg.read_at is not None
+    assert msg.reader_address == "1.2.3.4"
+
+
+def test_read_message_forbidden_for_sender(client, session, two_users):
+    alice, bob = two_users
+    msg = make_message(session, alice.id, bob.id)
+    resp = client.post(
+        "/v1/messages/read",
+        headers=auth_headers("alice"),
+        json={"id": msg.id, "reader_address": "1.2.3.4"},
+    )
+    assert resp.status_code == 403
+    assert resp.json()["error"]["message"] == "Forbidden"
+    session.refresh(msg)
+    assert msg.read_at is None
+    assert msg.reader_address is None
+
+
+def test_read_message_self_addressed(client, session, two_users):
+    alice, _ = two_users
+    msg = make_message(session, alice.id, alice.id)
+    resp = client.post(
+        "/v1/messages/read",
+        headers=auth_headers("alice"),
+        json={"id": msg.id, "reader_address": "1.2.3.4"},
+    )
+    assert resp.status_code == 200
+    session.refresh(msg)
+    assert msg.read_at is not None
 
 
 def test_read_message_not_found(client, session):
@@ -941,6 +972,9 @@ def test_read_message_forbidden_for_non_party(client, session, two_users):
         json={"id": msg.id, "reader_address": "1.2.3.4"},
     )
     assert resp.status_code == 403
+    assert resp.json()["error"]["message"] == "Forbidden"
+    session.refresh(msg)
+    assert msg.read_at is None
 
 
 # ── POST /messages/delete ─────────────────────────────────────────────────────
