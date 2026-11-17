@@ -2,9 +2,19 @@
 
 from datetime import UTC, datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 from pydantic.alias_generators import to_camel
 from sqlmodel import Field, SQLModel
+
+
+def check_username(username: str) -> str:
+    if "@" in username:
+        raise ValueError("Username must not contain '@'")
+    try:
+        int(username)
+    except ValueError:
+        return username
+    raise ValueError("Username must not be numeric")
 
 
 class UserBase(SQLModel):
@@ -49,6 +59,13 @@ class UserUpdateFields(BaseModel):
     first_name: str | None = None
     last_name: str | None = None
     device_address: str | None = None
+
+    @field_validator("username")
+    @classmethod
+    def username_not_id_or_email(cls, username: str | None) -> str | None:
+        if username is None:
+            return None
+        return check_username(username)
 
 
 class UserUpdateRequest(BaseModel):

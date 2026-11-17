@@ -1,4 +1,6 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
+
+from app.models.dbmodels import check_username
 
 
 class NewUser(BaseModel):
@@ -8,3 +10,8 @@ class NewUser(BaseModel):
     last_name: str
     email: str
     device_address: str | None = None
+
+    @field_validator("username")
+    @classmethod
+    def username_not_id_or_email(cls, username: str) -> str:
+        return check_username(username)
