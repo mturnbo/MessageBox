@@ -470,6 +470,42 @@ def test_register_requires_auth(client):
     assert resp.status_code == 401
 
 
+@pytest.mark.parametrize("username", ["12345", "0", "+5", " 7 ", "bob@example.com", "@", "a@b"])
+def test_register_rejects_numeric_or_email_like_username(client, session, username):
+    make_user(session)
+    resp = client.post(
+        "/v1/users/register",
+        headers=auth_headers(),
+        json={
+            "username": username,
+            "password": "pw123",
+            "first_name": "New",
+            "last_name": "User",
+            "email": "new@example.com",
+        },
+    )
+    assert resp.status_code == 422
+    assert session.exec(select(User).where(User.email == "new@example.com")).first() is None
+
+
+@pytest.mark.parametrize("username", ["user1", "1user", "12a", "a.b-c"])
+def test_register_accepts_username_with_digits_and_letters(client, session, username):
+    make_user(session)
+    resp = client.post(
+        "/v1/users/register",
+        headers=auth_headers(),
+        json={
+            "username": username,
+            "password": "pw123",
+            "first_name": "New",
+            "last_name": "User",
+            "email": "new@example.com",
+        },
+    )
+    assert resp.status_code == 201
+    assert resp.json()["username"] == username
+
+
 # ── GET /users/{limit}/{page} ─────────────────────────────────────────────────
 
 
@@ -525,6 +561,99 @@ def test_update_user_requires_auth(client, session):
     user = make_user(session)
     resp = client.post("/v1/users/update", json={"id": user.id, "userUpdate": {}})
     assert resp.status_code == 401
+
+
+def test_update_username(client, session):
+    user = make_user(session)
+    resp = client.post(
+        "/v1/users/update",
+        headers=auth_headers(),
+        json={"id": user.id, "userUpdate": {"username": "alice2"}},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["username"] == "alice2"
+
+
+def test_update_username_taken_by_other_user(client, session):
+    user = make_user(session)
+    make_user(session, username="bob", email="bob@example.com")
+    resp = client.post(
+        "/v1/users/update",
+        headers=auth_headers(),
+        json={"id": user.id, "userUpdate": {"username": "bob"}},
+    )
+    assert resp.status_code == 400
+    assert resp.json()["error"]["message"] == "Username already exists"
+    session.refresh(user)
+    assert user.username == "alice"
+
+
+def test_update_email_taken_by_other_user(client, session):
+    user = make_user(session)
+    make_user(session, username="bob", email="bob@example.com")
+    resp = client.post(
+        "/v1/users/update",
+        headers=auth_headers(),
+        json={"id": user.id, "userUpdate": {"email": "bob@example.com"}},
+    )
+    assert resp.status_code == 400
+    assert resp.json()["error"]["message"] == "Email already exists"
+    session.refresh(user)
+    assert user.email == "alice@example.com"
+
+
+def test_update_taken_email_does_not_apply_other_fields(client, session):
+    user = make_user(session)
+    make_user(session, username="bob", email="bob@example.com")
+    resp = client.post(
+        "/v1/users/update",
+        headers=auth_headers(),
+        json={"id": user.id, "userUpdate": {"username": "alice2", "email": "bob@example.com"}},
+    )
+    assert resp.status_code == 400
+    session.refresh(user)
+    assert user.username == "alice"
+
+
+def test_update_to_own_current_username_and_email(client, session):
+    user = make_user(session)
+    make_user(session, username="bob", email="bob@example.com")
+    resp = client.post(
+        "/v1/users/update",
+        headers=auth_headers(),
+        json={"id": user.id, "userUpdate": {"username": "alice", "email": "alice@example.com", "firstName": "Al"}},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["username"] == "alice"
+    assert body["email"] == "alice@example.com"
+    assert body["firstName"] == "Al"
+
+
+@pytest.mark.parametrize("username", ["12345", "0", "+5", "bob@example.com", "@", "a@b"])
+def test_update_rejects_numeric_or_email_like_username(client, session, username):
+    user = make_user(session)
+    resp = client.post(
+        "/v1/users/update",
+        headers=auth_headers(),
+        json={"id": user.id, "userUpdate": {"username": username}},
+    )
+    assert resp.status_code == 422
+    session.refresh(user)
+    assert user.username == "alice"
+
+
+def test_update_username_to_other_users_id_rejected(client, session):
+    user = make_user(session)
+    bob = make_user(session, username="bob", email="bob@example.com")
+    resp = client.post(
+        "/v1/users/update",
+        headers=auth_headers(),
+        json={"id": user.id, "userUpdate": {"username": str(bob.id)}},
+    )
+    assert resp.status_code == 422
+    lookup = client.get(f"/v1/users/{bob.id}", headers=auth_headers())
+    assert lookup.json()["username"] == "bob"
 
 
 # ── DELETE /users/delete/{id} ─────────────────────────────────────────────────
