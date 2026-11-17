@@ -46,7 +46,7 @@ export const AuthProvider = ({ children }) => {
       onTokenRefreshed: refreshAccessToken,
       onAuthFailure: logout,
     });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <AuthContext.Provider value={{ user, isLoggedIn, token, login, logout, refreshAccessToken }}>
@@ -55,4 +55,5 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => useContext(AuthContext);
