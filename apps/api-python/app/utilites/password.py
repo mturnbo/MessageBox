@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+import hashlib
 import jwt
 import os
 import bcrypt
@@ -46,8 +47,12 @@ def decode_token(token_str: str):
         return None
 
 
+def password_fingerprint(password_hash: str) -> str:
+    return hashlib.sha256(password_hash.encode('utf-8')).hexdigest()[:16]
+
+
 def token_claims(user: User) -> dict:
-    return {"sub": str(user.id)}
+    return {"sub": str(user.id), "pwd_fp": password_fingerprint(user.password_hash)}
 
 
 def find_token_user(session: Session, payload: dict) -> User | None:
@@ -55,7 +60,10 @@ def find_token_user(session: Session, payload: dict) -> User | None:
         user_id = int(payload.get("sub"))
     except (TypeError, ValueError):
         return None
-    return session.get(User, user_id)
+    user = session.get(User, user_id)
+    if not user or payload.get("pwd_fp") != password_fingerprint(user.password_hash):
+        return None
+    return user
 
 
 def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):

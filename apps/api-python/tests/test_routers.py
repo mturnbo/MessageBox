@@ -220,6 +220,74 @@ def test_refresh_rejects_legacy_username_subject(client, session):
     assert resp.status_code == 401
 
 
+def test_password_change_revokes_access_token(client, session):
+    user = make_user(session)
+    headers = auth_headers()
+    resp = client.post(
+        "/v1/users/update",
+        headers=headers,
+        json={"id": user.id, "userUpdate": {"password": "new-secret"}},
+    )
+    assert resp.status_code == 200
+    resp = client.get("/v1/users/", headers=headers)
+    assert resp.status_code == 401
+
+
+def test_password_change_revokes_refresh_token(client, session):
+    user = make_user(session)
+    refresh_token = create_refresh_token(token_claims(user))
+    client.post(
+        "/v1/users/update",
+        headers=auth_headers(),
+        json={"id": user.id, "userUpdate": {"password": "new-secret"}},
+    )
+    resp = client.post("/v1/auth/refresh", json={"refreshToken": refresh_token})
+    assert resp.status_code == 401
+
+
+def test_login_after_password_change_issues_working_token(client, session):
+    user = make_user(session)
+    client.post(
+        "/v1/users/update",
+        headers=auth_headers(),
+        json={"id": user.id, "userUpdate": {"password": "new-secret"}},
+    )
+    login = client.post("/v1/auth", json={"username": "alice", "password": "new-secret"})
+    token = login.json()["token"]
+    resp = client.get("/v1/users/", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 200
+
+
+def test_non_password_update_keeps_token_valid(client, session):
+    user = make_user(session)
+    headers = auth_headers()
+    client.post(
+        "/v1/users/update",
+        headers=headers,
+        json={"id": user.id, "userUpdate": {"firstName": "Alicia"}},
+    )
+    resp = client.get("/v1/users/", headers=headers)
+    assert resp.status_code == 200
+
+
+def test_token_without_password_fingerprint_rejected(client, session):
+    user = make_user(session)
+    token = create_access_token({"sub": str(user.id)})
+    resp = client.get("/v1/users/", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 401
+
+
+def test_reused_user_id_does_not_accept_old_token(client, session):
+    old_alice = make_user(session)
+    old_headers = auth_headers()
+    session.delete(old_alice)
+    session.commit()
+    new_user = make_user(session, username="mallory", email="mallory@example.com", password="other")
+    assert new_user.id == old_alice.id
+    resp = client.get("/v1/users/", headers=old_headers)
+    assert resp.status_code == 401
+
+
 def test_refreshed_access_token_authenticates_same_user(client, session):
     user = make_user(session)
     refresh_token = create_refresh_token(token_claims(user))
