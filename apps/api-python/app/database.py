@@ -1,6 +1,7 @@
-from sqlmodel import Session, create_engine
-from dotenv import load_dotenv
 import os
+
+from dotenv import load_dotenv
+from sqlmodel import Session, create_engine
 
 # Environment variables for database connection
 load_dotenv()

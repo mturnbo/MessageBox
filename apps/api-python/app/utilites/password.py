@@ -1,11 +1,13 @@
-from datetime import datetime, timedelta, timezone
 import hashlib
-import jwt
 import os
+from datetime import UTC, datetime, timedelta
+
 import bcrypt
+import jwt
 from fastapi import Depends, HTTPException
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlmodel import Session
+
 from app.config import JWT_SECRET
 from app.database import get_session
 from app.models.dbmodels import User
@@ -27,7 +29,7 @@ def compare_password(password, hashed_password):
 def create_access_token(data: dict):
     to_encode = data.copy()
     exp_seconds = int(os.getenv('JWT_EXPIRATION_TIME', '86400'))
-    expire = datetime.now(timezone.utc) + timedelta(seconds=exp_seconds)
+    expire = datetime.now(UTC) + timedelta(seconds=exp_seconds)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, JWT_SECRET, algorithm=ALGORITHM)
 
@@ -35,7 +37,7 @@ def create_access_token(data: dict):
 def create_refresh_token(data: dict):
     to_encode = data.copy()
     exp_seconds = int(os.getenv('JWT_REFRESH_EXPIRATION_TIME', '604800'))
-    expire = datetime.now(timezone.utc) + timedelta(seconds=exp_seconds)
+    expire = datetime.now(UTC) + timedelta(seconds=exp_seconds)
     to_encode.update({"exp": expire, "type": "refresh"})
     return jwt.encode(to_encode, JWT_SECRET, algorithm=ALGORITHM)
 
@@ -78,10 +80,10 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
         return payload
 
     except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token has expired")
+        raise HTTPException(status_code=401, detail="Token has expired") from None
 
     except jwt.PyJWTError:
-        raise HTTPException(status_code=401, detail="Could not validate credentials")
+        raise HTTPException(status_code=401, detail="Could not validate credentials") from None
 
 
 def get_current_user(

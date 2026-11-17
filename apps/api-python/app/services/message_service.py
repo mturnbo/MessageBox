@@ -1,15 +1,19 @@
 import hashlib
 import json
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
 from fastapi import HTTPException
 from sqlalchemy import func
-from sqlmodel import Session, select
 from sqlalchemy.exc import IntegrityError
+from sqlmodel import Session, select
 
 from app.models.dbmodels import (
-    Message, Thread, ThreadMessage,
-    CreateMessageRequest, ReplyToMessageRequest,
+    CreateMessageRequest,
+    Message,
+    ReplyToMessageRequest,
+    Thread,
+    ThreadMessage,
 )
 
 DEFAULT_LIMIT = 10
@@ -64,14 +68,14 @@ def get_sent(session: Session, sender_id: int, limit: int = DEFAULT_LIMIT, page:
     offset = (page - 1) * limit
     messages = session.exec(
         select(Message)
-        .where(Message.sender_id == sender_id, Message.deleted_by_sender == None)
+        .where(Message.sender_id == sender_id, Message.deleted_by_sender.is_(None))
         .order_by(Message.sent_at.desc())
         .offset(offset)
         .limit(limit)
     ).all()
     total = session.exec(
         select(func.count(Message.id)).where(
-            Message.sender_id == sender_id, Message.deleted_by_sender == None
+            Message.sender_id == sender_id, Message.deleted_by_sender.is_(None)
         )
     ).one()
     return {"messages": messages, "total": total, "page": page, "limit": limit}
@@ -82,14 +86,14 @@ def get_inbox(session: Session, recipient_id: int, limit: int = DEFAULT_LIMIT, p
     offset = (page - 1) * limit
     messages = session.exec(
         select(Message)
-        .where(Message.recipient_id == recipient_id, Message.deleted_by_recipient == None)
+        .where(Message.recipient_id == recipient_id, Message.deleted_by_recipient.is_(None))
         .order_by(Message.sent_at.desc())
         .offset(offset)
         .limit(limit)
     ).all()
     total = session.exec(
         select(func.count(Message.id)).where(
-            Message.recipient_id == recipient_id, Message.deleted_by_recipient == None
+            Message.recipient_id == recipient_id, Message.deleted_by_recipient.is_(None)
         )
     ).one()
     return {"messages": messages, "total": total, "page": page, "limit": limit}
@@ -246,7 +250,7 @@ def read_message(session: Session, message_id: int, reader_address: str | None) 
     message = session.get(Message, message_id)
     if not message:
         return None
-    message.read_at = datetime.now(timezone.utc)
+    message.read_at = datetime.now(UTC)
     message.reader_address = reader_address
     session.add(message)
     session.commit()
@@ -262,7 +266,7 @@ def delete_message(
         return None, None
     if deleted_by_user_id not in (message.sender_id, message.recipient_id):
         return message, None
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     status_msg = ""
     if deleted_by_user_id == message.sender_id:
         message.deleted_by_sender = now

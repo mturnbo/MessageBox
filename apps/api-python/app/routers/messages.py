@@ -1,19 +1,20 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from sqlmodel import Session
+
+from app.database import get_session
+from app.limiter import API_RATE_LIMIT, limiter
 from app.models.dbmodels import (
     CreateMessageRequest,
-    ReplyToMessageRequest,
-    ReadMessageRequest,
     DeleteMessageRequest,
-    MessageOut,
     MessageListResponse,
+    MessageOut,
     MessagePostResponse,
+    ReadMessageRequest,
+    ReplyToMessageRequest,
     User,
 )
-from app.database import get_session
-from app.utilites.password import get_current_user
 from app.services import message_service
-from app.limiter import limiter, API_RATE_LIMIT
+from app.utilites.password import get_current_user
 
 router = APIRouter(prefix="/messages", tags=["messages"])
 

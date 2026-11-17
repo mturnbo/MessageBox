@@ -1,4 +1,5 @@
 import pytest
+
 from app.config import validate_env
 
 ALL_REQUIRED = {

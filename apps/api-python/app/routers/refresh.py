@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlmodel import Session
+
 from app.database import get_session
-from app.utilites.password import decode_token, create_access_token, find_token_user, token_claims
-from app.limiter import limiter, AUTH_RATE_LIMIT
+from app.limiter import AUTH_RATE_LIMIT, limiter
+from app.utilites.password import create_access_token, decode_token, find_token_user, token_claims
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
