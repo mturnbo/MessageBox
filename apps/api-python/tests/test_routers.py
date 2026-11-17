@@ -67,6 +67,7 @@ def auth_headers(username="alice"):
 
 # ── /users/auth ───────────────────────────────────────────────────────────────
 
+
 def test_auth_returns_token(client, session):
     make_user(session)
     resp = client.post("/v1/auth", json={"username": "alice", "password": "secret"})
@@ -147,6 +148,7 @@ def test_refresh_token_rejected_as_access_token(client, session):
 
 
 # ── Token identity ────────────────────────────────────────────────────────────
+
 
 def test_auth_token_subject_is_user_id(client, session):
     user = make_user(session)
@@ -304,6 +306,7 @@ def test_refreshed_access_token_authenticates_same_user(client, session):
 
 # ── GET /users/ ───────────────────────────────────────────────────────────────
 
+
 def test_get_all_users_returns_list(client, session):
     make_user(session, username="alice", email="alice@example.com")
     make_user(session, username="bob", email="bob@example.com")
@@ -350,6 +353,7 @@ def test_get_all_users_offset(client, session):
 
 
 # ── GET /users/{user_id} ──────────────────────────────────────────────────────
+
 
 def test_get_user_by_id(client, session):
     user = make_user(session)
@@ -401,6 +405,7 @@ def test_get_user_no_password_hash(client, session):
 
 
 # ── POST /users/register ──────────────────────────────────────────────────────
+
 
 def test_register_new_user(client, session):
     make_user(session)
@@ -467,6 +472,7 @@ def test_register_requires_auth(client):
 
 # ── GET /users/{limit}/{page} ─────────────────────────────────────────────────
 
+
 def test_get_all_users_path_pagination_page1(client, session):
     for i in range(5):
         make_user(session, username=f"user{i}", email=f"user{i}@example.com")
@@ -490,6 +496,7 @@ def test_get_all_users_path_pagination_requires_auth(client, session):
 
 
 # ── POST /users/update ────────────────────────────────────────────────────────
+
 
 def test_update_user(client, session):
     user = make_user(session)
@@ -522,6 +529,7 @@ def test_update_user_requires_auth(client, session):
 
 # ── DELETE /users/delete/{id} ─────────────────────────────────────────────────
 
+
 def test_delete_user(client, session):
     user = make_user(session)
     make_user(session, username="bob", email="bob@example.com")
@@ -547,6 +555,7 @@ def test_delete_user_requires_auth(client, session):
 
 # ── GET /health ───────────────────────────────────────────────────────────────
 
+
 def test_health(client):
     resp = client.get("/v1/health")
     assert resp.status_code == 200
@@ -554,6 +563,7 @@ def test_health(client):
 
 
 # ── GET /users — camelCase response shape ─────────────────────────────────────
+
 
 def test_get_user_includes_date_fields(client, session):
     make_user(session)
@@ -564,6 +574,7 @@ def test_get_user_includes_date_fields(client, session):
 
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
+
 
 @pytest.fixture(name="two_users")
 def two_users_fixture(session):
@@ -587,6 +598,7 @@ def make_message(session, sender_id, recipient_id, **kwargs):
 
 
 # ── GET /messages/{id} ────────────────────────────────────────────────────────
+
 
 def test_get_message_by_id(client, session, two_users):
     alice, bob = two_users
@@ -618,6 +630,7 @@ def test_get_message_by_id_forbidden_for_non_party(client, session, two_users):
 
 
 # ── GET /messages/sent ────────────────────────────────────────────────────────
+
 
 def test_get_sent_messages(client, session, two_users):
     alice, bob = two_users
@@ -654,6 +667,7 @@ def test_get_sent_requires_auth(client, session, two_users):
 
 # ── GET /messages/inbox ───────────────────────────────────────────────────────
 
+
 def test_get_inbox_messages(client, session, two_users):
     alice, bob = two_users
     make_message(session, alice.id, bob.id, subject="for bob")
@@ -687,6 +701,7 @@ def test_get_inbox_requires_auth(client, session, two_users):
 
 
 # ── POST /messages/post ───────────────────────────────────────────────────────
+
 
 def test_create_message(client, session, two_users):
     alice, bob = two_users
@@ -764,6 +779,7 @@ def test_create_message_requires_auth(client, session, two_users):
 
 # ── POST /messages/reply ──────────────────────────────────────────────────────
 
+
 def test_reply_to_message(client, session, two_users):
     alice, bob = two_users
     parent = make_message(session, alice.id, bob.id)
@@ -830,6 +846,7 @@ def test_reply_requires_auth(client, session, two_users):
 
 # ── GET /messages/{id}/thread ─────────────────────────────────────────────────
 
+
 def test_get_thread_by_message_id(client, session, two_users):
     alice, bob = two_users
     parent = make_message(session, alice.id, bob.id)
@@ -884,6 +901,7 @@ def test_get_thread_forbidden_for_non_party(client, session, two_users):
 
 # ── POST /messages/read ───────────────────────────────────────────────────────
 
+
 def test_read_message(client, session, two_users):
     alice, bob = two_users
     msg = make_message(session, alice.id, bob.id)
@@ -926,6 +944,7 @@ def test_read_message_forbidden_for_non_party(client, session, two_users):
 
 
 # ── POST /messages/delete ─────────────────────────────────────────────────────
+
 
 def test_delete_message_by_sender(client, session, two_users):
     alice, bob = two_users
@@ -982,6 +1001,7 @@ def test_delete_message_requires_auth(client, session, two_users):
 
 # ── Soft delete exclusion ─────────────────────────────────────────────────────
 
+
 def test_sent_excludes_soft_deleted(client, session, two_users):
     alice, bob = two_users
     msg = make_message(session, alice.id, bob.id)
@@ -1024,6 +1044,7 @@ def test_soft_delete_is_per_party(client, session, two_users):
 
 
 # ── Ownership enforcement (cross-user 403s) ───────────────────────────────────
+
 
 def test_cannot_read_other_users_inbox(client, session, two_users):
     alice, bob = two_users

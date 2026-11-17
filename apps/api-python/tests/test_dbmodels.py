@@ -29,6 +29,7 @@ def make_user(**kwargs):
 
 # --- UserBase ---
 
+
 def test_userbase_fields():
     ub = UserBase(
         username="bob",
@@ -56,6 +57,7 @@ def test_userbase_device_address_optional():
 
 
 # --- User ---
+
 
 def test_user_create_and_retrieve(session):
     user = make_user()
@@ -116,6 +118,7 @@ def test_user_multiple_rows(session):
 
 # --- UserPublic ---
 
+
 def test_userpublic_excludes_password_hash(session):
     user = make_user()
     session.add(user)
@@ -129,6 +132,7 @@ def test_userpublic_excludes_password_hash(session):
 
 
 # --- Message ---
+
 
 def make_message(sender_id, recipient_id, **kwargs):
     defaults = dict(

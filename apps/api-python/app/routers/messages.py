@@ -99,9 +99,7 @@ def create_message(
     message, replayed = message_service.create_message(session, payload, idempotency_key)
     if replayed:
         response.status_code = 200
-    return MessagePostResponse.model_validate(
-        {**message.model_dump(), "idempotency_replayed": replayed}
-    )
+    return MessagePostResponse.model_validate({**message.model_dump(), "idempotency_replayed": replayed})
 
 
 @router.post("/reply", response_model=MessagePostResponse, status_code=201)
@@ -121,9 +119,7 @@ def reply_to_message(
     if current_user.id not in (parent.sender_id, parent.recipient_id):
         raise HTTPException(status_code=403, detail="Forbidden")
     idempotency_key = request.headers.get("idempotency-key")
-    message, thread_id, reply_to, replayed = message_service.reply_to_message(
-        session, payload, idempotency_key
-    )
+    message, thread_id, reply_to, replayed = message_service.reply_to_message(session, payload, idempotency_key)
     if replayed:
         response.status_code = 200
     return MessagePostResponse.model_validate(

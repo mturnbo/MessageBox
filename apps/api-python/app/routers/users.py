@@ -33,11 +33,11 @@ def _user_out(user: User) -> UserOut:
 @router.get("/", response_model=list[UserOut])
 @limiter.limit(API_RATE_LIMIT)
 def get_all_users(
-        request: Request,
-        session: Session = Depends(get_session),
-        current_user: User = Depends(get_current_user),
-        offset: int = 0,
-        limit: int = Query(default=100, le=MAX_LIMIT)
+    request: Request,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+    offset: int = 0,
+    limit: int = Query(default=100, le=MAX_LIMIT),
 ):
     users = session.exec(select(User).offset(offset).limit(limit)).all()
     return [_user_out(u) for u in users]

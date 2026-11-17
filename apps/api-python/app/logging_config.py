@@ -100,9 +100,7 @@ def configure_logging() -> None:
 
     if not is_production:
         console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setFormatter(
-            structlog.stdlib.ProcessorFormatter(processor=structlog.dev.ConsoleRenderer())
-        )
+        console_handler.setFormatter(structlog.stdlib.ProcessorFormatter(processor=structlog.dev.ConsoleRenderer()))
         app_logger.addHandler(console_handler)
 
 

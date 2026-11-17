@@ -13,6 +13,7 @@ from app.utilites.password import compare_password, create_access_token, create_
 router = APIRouter(prefix="/auth", tags=["auth"])
 security = HTTPBearer()
 
+
 @router.post("", response_model=Token)
 @limiter.limit(AUTH_RATE_LIMIT)
 def authenticate_user(request: Request, auth_cred: AuthCredentials, session: Session = Depends(get_session)):

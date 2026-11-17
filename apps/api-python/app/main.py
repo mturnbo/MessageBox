@@ -76,10 +76,13 @@ v1_router.include_router(health.router)
 
 app.include_router(v1_router)
 
+
 def main():
     import uvicorn
+
     port = int(os.getenv("PORT", "8000"))
     uvicorn.run("app.main:app", host="127.0.0.1", port=port, access_log=False)
+
 
 if __name__ == "__main__":
     main()

@@ -55,9 +55,7 @@ def _find_thread_for_message(session, message_id):
     thread = session.exec(select(Thread).where(Thread.origin_msg == message_id)).first()
     if thread:
         return thread
-    thread_msg = session.exec(
-        select(ThreadMessage).where(ThreadMessage.msg_id == message_id)
-    ).first()
+    thread_msg = session.exec(select(ThreadMessage).where(ThreadMessage.msg_id == message_id)).first()
     if not thread_msg:
         return None
     return session.get(Thread, thread_msg.thread_id)
@@ -74,9 +72,7 @@ def get_sent(session: Session, sender_id: int, limit: int = DEFAULT_LIMIT, page:
         .limit(limit)
     ).all()
     total = session.exec(
-        select(func.count(Message.id)).where(
-            Message.sender_id == sender_id, Message.deleted_by_sender.is_(None)
-        )
+        select(func.count(Message.id)).where(Message.sender_id == sender_id, Message.deleted_by_sender.is_(None))
     ).one()
     return {"messages": messages, "total": total, "page": page, "limit": limit}
 
@@ -113,17 +109,11 @@ def get_thread_by_message_id(session: Session, message_id: int) -> dict | None:
         return {"thread": None, "messages": [message.model_dump()]}
 
     thread_messages = session.exec(
-        select(ThreadMessage)
-        .where(ThreadMessage.thread_id == thread.id)
-        .order_by(ThreadMessage.msg_id)
+        select(ThreadMessage).where(ThreadMessage.thread_id == thread.id).order_by(ThreadMessage.msg_id)
     ).all()
 
     related_ids = [thread.origin_msg] + [tm.msg_id for tm in thread_messages]
-    messages = session.exec(
-        select(Message)
-        .where(Message.id.in_(related_ids))
-        .order_by(Message.sent_at)
-    ).all()
+    messages = session.exec(select(Message).where(Message.id.in_(related_ids)).order_by(Message.sent_at)).all()
 
     reply_index = {tm.msg_id: tm.reply_to for tm in thread_messages}
 
@@ -133,10 +123,7 @@ def get_thread_by_message_id(session: Session, message_id: int) -> dict | None:
             "origin_msg": thread.origin_msg,
             "created_at": thread.created_at,
         },
-        "messages": [
-            {**msg.model_dump(), "reply_to": reply_index.get(msg.id)}
-            for msg in messages
-        ],
+        "messages": [{**msg.model_dump(), "reply_to": reply_index.get(msg.id)} for msg in messages],
     }
 
 
@@ -146,9 +133,7 @@ def create_message(
     idempotency_key_header: str | None = None,
 ) -> tuple[Message, bool]:
     request_hash = _build_request_hash(payload)
-    client_message_id = _resolve_client_message_id(
-        idempotency_key_header, payload.client_message_id, request_hash
-    )
+    client_message_id = _resolve_client_message_id(idempotency_key_header, payload.client_message_id, request_hash)
     message = Message(
         sender_id=payload.sender_id,
         recipient_id=payload.recipient_id,
@@ -165,9 +150,7 @@ def create_message(
     except IntegrityError:
         session.rollback()
 
-    existing = session.exec(
-        select(Message).where(Message.client_message_id == client_message_id)
-    ).first()
+    existing = session.exec(select(Message).where(Message.client_message_id == client_message_id)).first()
     if not existing:
         raise HTTPException(
             status_code=409,
@@ -225,17 +208,13 @@ def reply_to_message(
     except IntegrityError:
         session.rollback()
 
-    existing = session.exec(
-        select(Message).where(Message.client_message_id == client_message_id)
-    ).first()
+    existing = session.exec(select(Message).where(Message.client_message_id == client_message_id)).first()
     if not existing:
         raise HTTPException(
             status_code=409,
             detail="Message request already processed but response could not be reconstructed",
         )
-    existing_tm = session.exec(
-        select(ThreadMessage).where(ThreadMessage.msg_id == existing.id)
-    ).first()
+    existing_tm = session.exec(select(ThreadMessage).where(ThreadMessage.msg_id == existing.id)).first()
     reply_to = existing_tm.reply_to if existing_tm else None
     if not _is_same_request(existing, payload, reply_to):
         raise HTTPException(

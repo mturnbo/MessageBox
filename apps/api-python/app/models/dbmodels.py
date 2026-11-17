@@ -14,16 +14,20 @@ class UserBase(SQLModel):
     last_name: str
     device_address: str | None
 
+
 class User(UserBase, table=True):
     __tablename__ = "users"
     id: int = Field(primary_key=True)
     password_hash: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
-    last_seen: datetime = Field(default_factory=lambda: datetime.now(UTC),
-                                 sa_column_kwargs={"onupdate": lambda: datetime.now(UTC)})
+    last_seen: datetime = Field(
+        default_factory=lambda: datetime.now(UTC), sa_column_kwargs={"onupdate": lambda: datetime.now(UTC)}
+    )
+
 
 class UserPublic(UserBase):
     id: int
+
 
 class UserOut(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
@@ -51,6 +55,7 @@ class UserUpdateRequest(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
     id: int
     user_update: UserUpdateFields
+
 
 class Message(SQLModel, table=True):
     __tablename__ = "messages"
@@ -120,6 +125,7 @@ class DeleteMessageRequest(BaseModel):
 
 # ── Response models (camelCase for Angular/Node parity) ───────────────────────
 
+
 class MessageOut(BaseModel):
     model_config = _camel
     id: int | None = None
@@ -147,4 +153,3 @@ class MessagePostResponse(MessageOut):
     thread_id: int | None = None
     reply_to: int | None = None
     idempotency_replayed: bool = False
-

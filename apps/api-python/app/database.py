@@ -15,6 +15,7 @@ DATABASE_URL = f"mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}:{MYS
 
 engine = create_engine(DATABASE_URL, echo=True)
 
+
 def get_session():
     with Session(engine) as session:
         yield session
