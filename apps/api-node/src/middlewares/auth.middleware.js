@@ -12,7 +12,7 @@ export const authMiddleware = (req, res, next) => {
 
     jwt.verify(token, JWT_SECRET, (err, user) => {
         if (err || user.type === 'refresh') {
-            return sendError(res, 403, 'Invalid or expired token');
+            return sendError(res, 401, 'Invalid or expired token');
         }
         req.user = user;
         next();
