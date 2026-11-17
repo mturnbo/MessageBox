@@ -2,9 +2,11 @@
 
 from datetime import UTC, datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, EmailStr
 from pydantic.alias_generators import to_camel
 from sqlmodel import Field, SQLModel
+
+from app.models.newuser import Password
 
 
 class UserBase(SQLModel):
@@ -44,8 +46,8 @@ class UserOut(BaseModel):
 class UserUpdateFields(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
     username: str | None = None
-    email: str | None = None
-    password: str | None = None
+    email: EmailStr | None = None
+    password: Password | None = None
     first_name: str | None = None
     last_name: str | None = None
     device_address: str | None = None

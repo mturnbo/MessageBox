@@ -6,7 +6,7 @@ from sqlalchemy import or_
 from sqlmodel import Session, select
 
 from app.database import get_session
-from app.limiter import API_RATE_LIMIT, limiter
+from app.limiter import API_RATE_LIMIT, AUTH_RATE_LIMIT, limiter
 from app.models.dbmodels import User, UserOut, UserUpdateRequest
 from app.models.newuser import NewUser
 from app.utilites.password import generate_hashed_password, get_current_user
@@ -80,7 +80,7 @@ def get_user(
 
 
 @router.post("/register", response_model=UserOut, status_code=201)
-@limiter.limit(API_RATE_LIMIT)
+@limiter.limit(AUTH_RATE_LIMIT)
 def create_user(
     request: Request,
     user_data: NewUser,

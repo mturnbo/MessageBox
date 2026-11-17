@@ -123,16 +123,20 @@ Create a new user.
 {
   "username": "alice",
   "email": "alice@example.com",
-  "password": "secret",
+  "password": "correct-horse",
   "firstName": "Alice",
   "lastName": "Smith",
   "deviceAddress": "192.168.1.10"
 }
 ```
 
-`deviceAddress` is optional.
+`deviceAddress` is optional. `email` must be a valid email address. `password` must be at least 8 characters and at most 72 bytes UTF-8 encoded (the bcrypt limit).
+
+Rate limited with the stricter auth limit (`AUTH_RATE_LIMIT_MAX` per `AUTH_RATE_LIMIT_WINDOW_MS`).
 
 **Response `201`:** user object
+
+**Response `422`:** invalid email or password
 
 #### `POST /v1/users/update`
 
@@ -149,9 +153,11 @@ Update one or more fields on an existing user.
 }
 ```
 
-`userUpdate` may contain any subset of: `username`, `email`, `password`, `firstName`, `lastName`, `deviceAddress`.
+`userUpdate` may contain any subset of: `username`, `email`, `password`, `firstName`, `lastName`, `deviceAddress`. `email` and `password` follow the same rules as registration.
 
 **Response `200`:** user object
+
+**Response `422`:** invalid email or password
 
 #### `DELETE /v1/users/delete/{id}`
 
