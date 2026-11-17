@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import SQLModel, Session, create_engine
+from sqlmodel import SQLModel, Session, create_engine, select
 from sqlmodel.pool import StaticPool
 
 from app.main import app
@@ -892,6 +892,61 @@ def test_cannot_reply_as_another_user(client, session, two_users):
         json={"reply_to_id": parent.id, "sender_id": bob.id, "recipient_id": alice.id, "body": "fake"},
     )
     assert resp.status_code == 403
+
+
+def test_cannot_reply_to_message_as_non_party(client, session, two_users):
+    alice, bob = two_users
+    carol = make_user(session, username="carol", email="carol@example.com")
+    parent = make_message(session, alice.id, bob.id)
+    resp = client.post(
+        "/v1/messages/reply",
+        headers=auth_headers("carol"),
+        json={"reply_to_id": parent.id, "sender_id": carol.id, "recipient_id": alice.id, "body": "intrude"},
+    )
+    assert resp.status_code == 403
+    assert session.exec(select(Message).where(Message.sender_id == carol.id)).first() is None
+
+
+def test_non_party_cannot_read_thread_via_own_reply(client, session, two_users):
+    alice, bob = two_users
+    carol = make_user(session, username="carol", email="carol@example.com")
+    parent = make_message(session, alice.id, bob.id, body="private")
+    client.post(
+        "/v1/messages/reply",
+        headers=auth_headers("bob"),
+        json={"reply_to_id": parent.id, "sender_id": bob.id, "recipient_id": alice.id, "body": "also private"},
+    )
+    resp = client.post(
+        "/v1/messages/reply",
+        headers=auth_headers("carol"),
+        json={"reply_to_id": parent.id, "sender_id": carol.id, "recipient_id": carol.id, "body": "x"},
+    )
+    assert resp.status_code == 403
+    thread = client.get(f"/v1/messages/{parent.id}/thread", headers=auth_headers("alice")).json()
+    assert len(thread["messages"]) == 2
+    assert all(m["sender_id"] != carol.id for m in thread["messages"])
+
+
+def test_sender_can_reply_to_own_message(client, session, two_users):
+    alice, bob = two_users
+    parent = make_message(session, alice.id, bob.id)
+    resp = client.post(
+        "/v1/messages/reply",
+        headers=auth_headers("alice"),
+        json={"reply_to_id": parent.id, "sender_id": alice.id, "recipient_id": bob.id, "body": "follow-up"},
+    )
+    assert resp.status_code == 201
+    assert resp.json()["replyTo"] == parent.id
+
+
+def test_non_party_reply_to_nonexistent_message_returns_404(client, session):
+    carol = make_user(session, username="carol", email="carol@example.com")
+    resp = client.post(
+        "/v1/messages/reply",
+        headers=auth_headers("carol"),
+        json={"reply_to_id": 9999, "sender_id": carol.id, "recipient_id": carol.id, "body": "x"},
+    )
+    assert resp.status_code == 404
 
 
 def test_cannot_delete_message_as_another_user(client, session, two_users):
