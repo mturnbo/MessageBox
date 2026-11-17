@@ -26,7 +26,7 @@
 ### Dependencies ###
 node_modules
 yarn.lock
-package-lock.json
+!package-lock.json
 /.pnp
 .pnp.js
 
