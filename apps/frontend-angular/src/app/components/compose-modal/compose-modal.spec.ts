@@ -98,6 +98,33 @@ describe('ComposeModalComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  describe('header icon', () => {
+    function headerIcons(): Element[] {
+      return Array.from(document.querySelectorAll('.mb-compose-dialog__icon'));
+    }
+
+    it('should show the pencil icon when composing a new message', async () => {
+      await createComponent();
+      setupDefaultSpies();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      const icons = headerIcons();
+      expect(icons.length).toBe(1);
+      expect(icons[0].classList).toContain('pi-pencil');
+    });
+
+    it('should show only the reply icon when replying', async () => {
+      await createComponent();
+      setupDefaultSpies();
+      component.replyTo = mockSentMessage;
+      fixture.detectChanges();
+      await fixture.whenStable();
+      const icons = headerIcons();
+      expect(icons.length).toBe(1);
+      expect(icons[0].classList).toContain('pi-reply');
+    });
+  });
+
   describe('form validation', () => {
     it('should be invalid when recipient and body are empty', async () => {
       await createComponent();

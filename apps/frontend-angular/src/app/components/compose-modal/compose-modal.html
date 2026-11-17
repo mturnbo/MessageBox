@@ -11,8 +11,11 @@
 
   <ng-template #header>
     <div class="mb-compose-dialog__header">
-      <i class="pi pi-reply mb-compose-dialog__icon" *ngIf="replyTo; else composeIcon"></i>
-      <ng-template #composeIcon><i class="pi pi-pencil mb-compose-dialog__icon"></i></ng-template>
+      @if (replyTo) {
+        <i class="pi pi-reply mb-compose-dialog__icon"></i>
+      } @else {
+        <i class="pi pi-pencil mb-compose-dialog__icon"></i>
+      }
       <h3 class="mb-compose-dialog__title">{{ replyTo ? 'Reply' : 'New Message' }}</h3>
     </div>
   </ng-template>
