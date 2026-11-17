@@ -320,7 +320,7 @@ def test_get_all_users_no_password_hash(client, session):
 
 def test_get_all_users_requires_auth(client):
     resp = client.get("/v1/users/")
-    assert resp.status_code == 403
+    assert resp.status_code == 401
 
 
 def test_get_all_users_invalid_token(client):
@@ -386,7 +386,7 @@ def test_get_user_by_id_not_found(client, session):
 def test_get_user_by_id_requires_auth(client, session):
     user = make_user(session)
     resp = client.get(f"/v1/users/{user.id}")
-    assert resp.status_code == 403
+    assert resp.status_code == 401
 
 
 def test_get_user_no_password_hash(client, session):
@@ -457,7 +457,7 @@ def test_register_requires_auth(client):
             "email": "u@example.com",
         },
     )
-    assert resp.status_code == 403
+    assert resp.status_code == 401
 
 
 # ── GET /users/{limit}/{page} ─────────────────────────────────────────────────
@@ -481,7 +481,7 @@ def test_get_all_users_path_pagination_page2(client, session):
 def test_get_all_users_path_pagination_requires_auth(client, session):
     make_user(session)
     resp = client.get("/v1/users/10/1")
-    assert resp.status_code == 403
+    assert resp.status_code == 401
 
 
 # ── POST /users/update ────────────────────────────────────────────────────────
@@ -512,7 +512,7 @@ def test_update_user_not_found(client, session):
 def test_update_user_requires_auth(client, session):
     user = make_user(session)
     resp = client.post("/v1/users/update", json={"id": user.id, "userUpdate": {}})
-    assert resp.status_code == 403
+    assert resp.status_code == 401
 
 
 # ── DELETE /users/delete/{id} ─────────────────────────────────────────────────
@@ -537,7 +537,7 @@ def test_delete_user_not_found(client, session):
 def test_delete_user_requires_auth(client, session):
     user = make_user(session)
     resp = client.delete(f"/v1/users/delete/{user.id}")
-    assert resp.status_code == 403
+    assert resp.status_code == 401
 
 
 # ── GET /health ───────────────────────────────────────────────────────────────
@@ -601,7 +601,7 @@ def test_get_message_by_id_requires_auth(client, session, two_users):
     alice, bob = two_users
     msg = make_message(session, alice.id, bob.id)
     resp = client.get(f"/v1/messages/{msg.id}")
-    assert resp.status_code == 403
+    assert resp.status_code == 401
 
 
 def test_get_message_by_id_forbidden_for_non_party(client, session, two_users):
@@ -644,7 +644,7 @@ def test_get_sent_missing_sender_id(client, session):
 def test_get_sent_requires_auth(client, session, two_users):
     alice, bob = two_users
     resp = client.get(f"/v1/messages/sent?senderId={alice.id}")
-    assert resp.status_code == 403
+    assert resp.status_code == 401
 
 
 # ── GET /messages/inbox ───────────────────────────────────────────────────────
@@ -678,7 +678,7 @@ def test_get_inbox_missing_recipient_id(client, session):
 def test_get_inbox_requires_auth(client, session, two_users):
     alice, bob = two_users
     resp = client.get(f"/v1/messages/inbox?recipientId={bob.id}")
-    assert resp.status_code == 403
+    assert resp.status_code == 401
 
 
 # ── POST /messages/post ───────────────────────────────────────────────────────
@@ -754,7 +754,7 @@ def test_create_message_requires_auth(client, session, two_users):
         "/v1/messages/post",
         json={"sender_id": alice.id, "recipient_id": bob.id, "body": "hi"},
     )
-    assert resp.status_code == 403
+    assert resp.status_code == 401
 
 
 # ── POST /messages/reply ──────────────────────────────────────────────────────
@@ -820,7 +820,7 @@ def test_reply_requires_auth(client, session, two_users):
         "/v1/messages/reply",
         json={"reply_to_id": parent.id, "sender_id": bob.id, "recipient_id": alice.id},
     )
-    assert resp.status_code == 403
+    assert resp.status_code == 401
 
 
 # ── GET /messages/{id}/thread ─────────────────────────────────────────────────
@@ -866,7 +866,7 @@ def test_get_thread_requires_auth(client, session, two_users):
     alice, bob = two_users
     msg = make_message(session, alice.id, bob.id)
     resp = client.get(f"/v1/messages/{msg.id}/thread")
-    assert resp.status_code == 403
+    assert resp.status_code == 401
 
 
 def test_get_thread_forbidden_for_non_party(client, session, two_users):
@@ -905,7 +905,7 @@ def test_read_message_requires_auth(client, session, two_users):
     alice, bob = two_users
     msg = make_message(session, alice.id, bob.id)
     resp = client.post("/v1/messages/read", json={"id": msg.id, "reader_address": "1.2.3.4"})
-    assert resp.status_code == 403
+    assert resp.status_code == 401
 
 
 def test_read_message_forbidden_for_non_party(client, session, two_users):
@@ -972,7 +972,7 @@ def test_delete_message_requires_auth(client, session, two_users):
     alice, bob = two_users
     msg = make_message(session, alice.id, bob.id)
     resp = client.post("/v1/messages/delete", json={"id": msg.id, "deleted_by": alice.id})
-    assert resp.status_code == 403
+    assert resp.status_code == 401
 
 
 # ── Soft delete exclusion ─────────────────────────────────────────────────────
