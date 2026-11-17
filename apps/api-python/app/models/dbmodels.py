@@ -1,10 +1,11 @@
 # Database Models
 
-import datetime
+from datetime import UTC, datetime
+
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
-from sqlmodel import SQLModel, Field, Column
-from datetime import datetime, timezone
+from sqlmodel import Field, SQLModel
+
 
 class UserBase(SQLModel):
     username: str = Field(unique=True, index=True)
@@ -13,16 +14,20 @@ class UserBase(SQLModel):
     last_name: str
     device_address: str | None
 
+
 class User(UserBase, table=True):
     __tablename__ = "users"
     id: int = Field(primary_key=True)
     password_hash: str
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    last_seen: datetime = Field(default_factory=lambda: datetime.now(timezone.utc),
-                                 sa_column_kwargs={"onupdate": lambda: datetime.now(timezone.utc)})
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    last_seen: datetime = Field(
+        default_factory=lambda: datetime.now(UTC), sa_column_kwargs={"onupdate": lambda: datetime.now(UTC)}
+    )
+
 
 class UserPublic(UserBase):
     id: int
+
 
 class UserOut(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
@@ -34,6 +39,14 @@ class UserOut(BaseModel):
     device_address: str | None = None
     date_created: datetime | None = None
     last_login: datetime | None = None
+
+
+class UserSummary(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+    id: int
+    username: str
+    first_name: str
+    last_name: str
 
 
 class UserUpdateFields(BaseModel):
@@ -51,6 +64,7 @@ class UserUpdateRequest(BaseModel):
     id: int
     user_update: UserUpdateFields
 
+
 class Message(SQLModel, table=True):
     __tablename__ = "messages"
     id: int | None = Field(default=None, primary_key=True)
@@ -58,7 +72,7 @@ class Message(SQLModel, table=True):
     recipient_id: int = Field(foreign_key="users.id", index=True)
     subject: str | None = None
     body: str | None = None
-    sent_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    sent_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     sender_address: str | None = None
     client_message_id: str | None = Field(default=None, unique=True)
     read_at: datetime | None = None
@@ -71,7 +85,7 @@ class Thread(SQLModel, table=True):
     __tablename__ = "threads"
     id: int | None = Field(default=None, primary_key=True)
     origin_msg: int = Field(foreign_key="messages.id", unique=True)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class ThreadMessage(SQLModel, table=True):
@@ -119,6 +133,7 @@ class DeleteMessageRequest(BaseModel):
 
 # ── Response models (camelCase for Angular/Node parity) ───────────────────────
 
+
 class MessageOut(BaseModel):
     model_config = _camel
     id: int | None = None
@@ -146,4 +161,3 @@ class MessagePostResponse(MessageOut):
     thread_id: int | None = None
     reply_to: int | None = None
     idempotency_replayed: bool = False
-

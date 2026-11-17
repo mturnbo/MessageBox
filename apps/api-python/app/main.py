@@ -1,26 +1,29 @@
 import os
-import sys
 from uuid import uuid4
+
 from dotenv import load_dotenv
 
 load_dotenv()
 
 from app.config import validate_env
+
 validate_env()
 
-from app.logging_config import configure_logging, RequestLoggingMiddleware
+from app.logging_config import RequestLoggingMiddleware, configure_logging
+
 configure_logging()
 
-from fastapi import FastAPI, APIRouter, Request
-from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
-from starlette.exceptions import HTTPException as StarletteHTTPException
-from app.routers import auth, users, messages, health, refresh
-from fastapi.middleware.cors import CORSMiddleware
 from asgi_correlation_id import CorrelationIdMiddleware
+from fastapi import APIRouter, FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
 from app.limiter import limiter
+from app.routers import auth, health, messages, refresh, users
 
 origins = [
     "http://localhost",
@@ -73,10 +76,13 @@ v1_router.include_router(health.router)
 
 app.include_router(v1_router)
 
+
 def main():
     import uvicorn
+
     port = int(os.getenv("PORT", "8000"))
     uvicorn.run("app.main:app", host="127.0.0.1", port=port, access_log=False)
+
 
 if __name__ == "__main__":
     main()

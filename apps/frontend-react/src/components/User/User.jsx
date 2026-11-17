@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import './User.css';
 
 const User = ({ userData }) => {
-  const { id, username, first_name, last_name } = userData;
+  const { username, first_name, last_name } = userData;
 
   return <div
     className="w-full max-w-sm bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700">

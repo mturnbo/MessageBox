@@ -50,7 +50,7 @@ export const NotificationProvider = ({ children }) => {
     }, POLL_INTERVAL_MS);
 
     return () => clearInterval(interval);
-  }, [isLoggedIn, user?.userId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isLoggedIn, user?.userId]);
 
   return (
     <NotificationContext.Provider value={{ inboxUnread, setInboxUnread, sentTotal, setSentTotal, showToast }}>
@@ -60,4 +60,5 @@ export const NotificationProvider = ({ children }) => {
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useNotifications = () => useContext(NotificationContext);

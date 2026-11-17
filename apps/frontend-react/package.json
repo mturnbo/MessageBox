@@ -41,7 +41,7 @@
     "prettier": "^3.6.2",
     "prop-types": "^15.8.1",
     "storybook": "^10.0.4",
-    "vite": "^7.1.7",
+    "vite": "^7.3.8",
     "vitest": "^4.0.7"
   },
   "dependencies": {
@@ -50,7 +50,7 @@
     "primereact": "^10.9.8",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
-    "react-router-dom": "^7.9.5",
+    "react-router-dom": "^7.18.5",
     "tailwindcss": "^4.1.16"
   }
 }

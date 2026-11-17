@@ -1,15 +1,19 @@
 import hashlib
 import json
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
 from fastapi import HTTPException
 from sqlalchemy import func
-from sqlmodel import Session, select
 from sqlalchemy.exc import IntegrityError
+from sqlmodel import Session, select
 
 from app.models.dbmodels import (
-    Message, Thread, ThreadMessage,
-    CreateMessageRequest, ReplyToMessageRequest,
+    CreateMessageRequest,
+    Message,
+    ReplyToMessageRequest,
+    Thread,
+    ThreadMessage,
 )
 
 DEFAULT_LIMIT = 10
@@ -51,9 +55,7 @@ def _find_thread_for_message(session, message_id):
     thread = session.exec(select(Thread).where(Thread.origin_msg == message_id)).first()
     if thread:
         return thread
-    thread_msg = session.exec(
-        select(ThreadMessage).where(ThreadMessage.msg_id == message_id)
-    ).first()
+    thread_msg = session.exec(select(ThreadMessage).where(ThreadMessage.msg_id == message_id)).first()
     if not thread_msg:
         return None
     return session.get(Thread, thread_msg.thread_id)
@@ -64,15 +66,13 @@ def get_sent(session: Session, sender_id: int, limit: int = DEFAULT_LIMIT, page:
     offset = (page - 1) * limit
     messages = session.exec(
         select(Message)
-        .where(Message.sender_id == sender_id, Message.deleted_by_sender == None)
+        .where(Message.sender_id == sender_id, Message.deleted_by_sender.is_(None))
         .order_by(Message.sent_at.desc())
         .offset(offset)
         .limit(limit)
     ).all()
     total = session.exec(
-        select(func.count(Message.id)).where(
-            Message.sender_id == sender_id, Message.deleted_by_sender == None
-        )
+        select(func.count(Message.id)).where(Message.sender_id == sender_id, Message.deleted_by_sender.is_(None))
     ).one()
     return {"messages": messages, "total": total, "page": page, "limit": limit}
 
@@ -82,14 +82,14 @@ def get_inbox(session: Session, recipient_id: int, limit: int = DEFAULT_LIMIT, p
     offset = (page - 1) * limit
     messages = session.exec(
         select(Message)
-        .where(Message.recipient_id == recipient_id, Message.deleted_by_recipient == None)
+        .where(Message.recipient_id == recipient_id, Message.deleted_by_recipient.is_(None))
         .order_by(Message.sent_at.desc())
         .offset(offset)
         .limit(limit)
     ).all()
     total = session.exec(
         select(func.count(Message.id)).where(
-            Message.recipient_id == recipient_id, Message.deleted_by_recipient == None
+            Message.recipient_id == recipient_id, Message.deleted_by_recipient.is_(None)
         )
     ).one()
     return {"messages": messages, "total": total, "page": page, "limit": limit}
@@ -109,17 +109,11 @@ def get_thread_by_message_id(session: Session, message_id: int) -> dict | None:
         return {"thread": None, "messages": [message.model_dump()]}
 
     thread_messages = session.exec(
-        select(ThreadMessage)
-        .where(ThreadMessage.thread_id == thread.id)
-        .order_by(ThreadMessage.msg_id)
+        select(ThreadMessage).where(ThreadMessage.thread_id == thread.id).order_by(ThreadMessage.msg_id)
     ).all()
 
     related_ids = [thread.origin_msg] + [tm.msg_id for tm in thread_messages]
-    messages = session.exec(
-        select(Message)
-        .where(Message.id.in_(related_ids))
-        .order_by(Message.sent_at)
-    ).all()
+    messages = session.exec(select(Message).where(Message.id.in_(related_ids)).order_by(Message.sent_at)).all()
 
     reply_index = {tm.msg_id: tm.reply_to for tm in thread_messages}
 
@@ -129,10 +123,7 @@ def get_thread_by_message_id(session: Session, message_id: int) -> dict | None:
             "origin_msg": thread.origin_msg,
             "created_at": thread.created_at,
         },
-        "messages": [
-            {**msg.model_dump(), "reply_to": reply_index.get(msg.id)}
-            for msg in messages
-        ],
+        "messages": [{**msg.model_dump(), "reply_to": reply_index.get(msg.id)} for msg in messages],
     }
 
 
@@ -142,9 +133,7 @@ def create_message(
     idempotency_key_header: str | None = None,
 ) -> tuple[Message, bool]:
     request_hash = _build_request_hash(payload)
-    client_message_id = _resolve_client_message_id(
-        idempotency_key_header, payload.client_message_id, request_hash
-    )
+    client_message_id = _resolve_client_message_id(idempotency_key_header, payload.client_message_id, request_hash)
     message = Message(
         sender_id=payload.sender_id,
         recipient_id=payload.recipient_id,
@@ -161,9 +150,7 @@ def create_message(
     except IntegrityError:
         session.rollback()
 
-    existing = session.exec(
-        select(Message).where(Message.client_message_id == client_message_id)
-    ).first()
+    existing = session.exec(select(Message).where(Message.client_message_id == client_message_id)).first()
     if not existing:
         raise HTTPException(
             status_code=409,
@@ -221,17 +208,13 @@ def reply_to_message(
     except IntegrityError:
         session.rollback()
 
-    existing = session.exec(
-        select(Message).where(Message.client_message_id == client_message_id)
-    ).first()
+    existing = session.exec(select(Message).where(Message.client_message_id == client_message_id)).first()
     if not existing:
         raise HTTPException(
             status_code=409,
             detail="Message request already processed but response could not be reconstructed",
         )
-    existing_tm = session.exec(
-        select(ThreadMessage).where(ThreadMessage.msg_id == existing.id)
-    ).first()
+    existing_tm = session.exec(select(ThreadMessage).where(ThreadMessage.msg_id == existing.id)).first()
     reply_to = existing_tm.reply_to if existing_tm else None
     if not _is_same_request(existing, payload, reply_to):
         raise HTTPException(
@@ -246,7 +229,7 @@ def read_message(session: Session, message_id: int, reader_address: str | None) 
     message = session.get(Message, message_id)
     if not message:
         return None
-    message.read_at = datetime.now(timezone.utc)
+    message.read_at = datetime.now(UTC)
     message.reader_address = reader_address
     session.add(message)
     session.commit()
@@ -262,7 +245,7 @@ def delete_message(
         return None, None
     if deleted_by_user_id not in (message.sender_id, message.recipient_id):
         return message, None
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     status_msg = ""
     if deleted_by_user_id == message.sender_id:
         message.deleted_by_sender = now

@@ -1,8 +1,9 @@
-from datetime import datetime, timezone
-from sqlmodel import SQLModel, Session, create_engine, select
-import pytest
+from datetime import UTC, datetime
 
-from app.models.dbmodels import User, UserBase, UserPublic, Message
+import pytest
+from sqlmodel import Session, SQLModel, create_engine, select
+
+from app.models.dbmodels import Message, User, UserBase, UserPublic
 
 
 @pytest.fixture(name="session")
@@ -27,6 +28,7 @@ def make_user(**kwargs):
 
 
 # --- UserBase ---
+
 
 def test_userbase_fields():
     ub = UserBase(
@@ -55,6 +57,7 @@ def test_userbase_device_address_optional():
 
 
 # --- User ---
+
 
 def test_user_create_and_retrieve(session):
     user = make_user()
@@ -115,6 +118,7 @@ def test_user_multiple_rows(session):
 
 # --- UserPublic ---
 
+
 def test_userpublic_excludes_password_hash(session):
     user = make_user()
     session.add(user)
@@ -128,6 +132,7 @@ def test_userpublic_excludes_password_hash(session):
 
 
 # --- Message ---
+
 
 def make_message(sender_id, recipient_id, **kwargs):
     defaults = dict(
@@ -199,7 +204,7 @@ def test_message_optional_fields_default_none(session, two_users):
 
 def test_message_read_fields_settable(session, two_users):
     alice, bob = two_users
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     msg = make_message(
         sender_id=alice.id,
         recipient_id=bob.id,
@@ -215,7 +220,7 @@ def test_message_read_fields_settable(session, two_users):
 
 def test_message_soft_delete_flags_settable(session, two_users):
     alice, bob = two_users
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     msg = make_message(
         sender_id=alice.id,
         recipient_id=bob.id,

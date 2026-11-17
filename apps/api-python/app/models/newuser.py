@@ -1,5 +1,5 @@
-from typing import Optional
 from pydantic import BaseModel
+
 
 class NewUser(BaseModel):
     username: str
@@ -7,4 +7,4 @@ class NewUser(BaseModel):
     first_name: str
     last_name: str
     email: str
-    device_address: Optional[str] = None
+    device_address: str | None = None
