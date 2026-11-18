@@ -1,6 +1,6 @@
 from pydantic import BaseModel, field_validator
 
-from app.models.dbmodels import check_username
+from app.models.validators import check_username
 
 
 class NewUser(BaseModel):

@@ -6,15 +6,7 @@ from pydantic import BaseModel, ConfigDict, field_validator
 from pydantic.alias_generators import to_camel
 from sqlmodel import Field, SQLModel
 
-
-def check_username(username: str) -> str:
-    if "@" in username:
-        raise ValueError("Username must not contain '@'")
-    try:
-        int(username)
-    except ValueError:
-        return username
-    raise ValueError("Username must not be numeric")
+from app.models.validators import check_username
 
 
 class UserBase(SQLModel):
