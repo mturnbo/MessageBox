@@ -2,9 +2,20 @@
 
 from datetime import UTC, datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, ValidationInfo, field_validator
 from pydantic.alias_generators import to_camel
 from sqlmodel import Field, SQLModel
+
+
+def scope_client_message_id(sender_id: int, key: str) -> str:
+    return f"{sender_id}:{key}"
+
+
+def unscope_client_message_id(sender_id: int, stored_key: str | None) -> str | None:
+    prefix = f"{sender_id}:"
+    if stored_key and stored_key.startswith(prefix):
+        return stored_key[len(prefix) :]
+    return stored_key
 
 
 class UserBase(SQLModel):
@@ -148,6 +159,11 @@ class MessageOut(BaseModel):
     reader_address: str | None = None
     deleted_by_sender: datetime | None = None
     deleted_by_recipient: datetime | None = None
+
+    @field_validator("client_message_id")
+    @classmethod
+    def strip_sender_scope(cls, value: str | None, info: ValidationInfo) -> str | None:
+        return unscope_client_message_id(info.data["sender_id"], value)
 
 
 class MessageListResponse(BaseModel):

@@ -14,6 +14,8 @@ from app.models.dbmodels import (
     ReplyToMessageRequest,
     Thread,
     ThreadMessage,
+    scope_client_message_id,
+    unscope_client_message_id,
 )
 
 DEFAULT_LIMIT = 10
@@ -32,10 +34,10 @@ def _build_request_hash(payload, reply_to_id=None):
     return hashlib.sha256(json.dumps(data, sort_keys=True).encode()).hexdigest()
 
 
-def _resolve_client_message_id(header_key, payload_key, payload_hash, reply_to_id=None):
+def _resolve_client_message_id(sender_id, header_key, payload_key, payload_hash, reply_to_id=None):
     explicit_key = header_key or payload_key
     if explicit_key:
-        return explicit_key
+        return scope_client_message_id(sender_id, explicit_key)
     bucket = int(time.time() * 1000) // AUTO_IDEMPOTENCY_WINDOW_MS
     return f"auto:{payload_hash}:{bucket}"
 
@@ -99,6 +101,12 @@ def get_message_by_id(session: Session, message_id: int) -> Message | None:
     return session.get(Message, message_id)
 
 
+def _thread_message_dict(message: Message) -> dict:
+    data = message.model_dump()
+    data["client_message_id"] = unscope_client_message_id(message.sender_id, message.client_message_id)
+    return data
+
+
 def get_thread_by_message_id(session: Session, message_id: int) -> dict | None:
     message = session.get(Message, message_id)
     if not message:
@@ -106,7 +114,7 @@ def get_thread_by_message_id(session: Session, message_id: int) -> dict | None:
 
     thread = _find_thread_for_message(session, message_id)
     if not thread:
-        return {"thread": None, "messages": [message.model_dump()]}
+        return {"thread": None, "messages": [_thread_message_dict(message)]}
 
     thread_messages = session.exec(
         select(ThreadMessage).where(ThreadMessage.thread_id == thread.id).order_by(ThreadMessage.msg_id)
@@ -123,7 +131,7 @@ def get_thread_by_message_id(session: Session, message_id: int) -> dict | None:
             "origin_msg": thread.origin_msg,
             "created_at": thread.created_at,
         },
-        "messages": [{**msg.model_dump(), "reply_to": reply_index.get(msg.id)} for msg in messages],
+        "messages": [{**_thread_message_dict(msg), "reply_to": reply_index.get(msg.id)} for msg in messages],
     }
 
 
@@ -133,7 +141,9 @@ def create_message(
     idempotency_key_header: str | None = None,
 ) -> tuple[Message, bool]:
     request_hash = _build_request_hash(payload)
-    client_message_id = _resolve_client_message_id(idempotency_key_header, payload.client_message_id, request_hash)
+    client_message_id = _resolve_client_message_id(
+        payload.sender_id, idempotency_key_header, payload.client_message_id, request_hash
+    )
     message = Message(
         sender_id=payload.sender_id,
         recipient_id=payload.recipient_id,
@@ -175,7 +185,7 @@ def reply_to_message(
 
     request_hash = _build_request_hash(payload, payload.reply_to_id)
     client_message_id = _resolve_client_message_id(
-        idempotency_key_header, payload.client_message_id, request_hash, payload.reply_to_id
+        payload.sender_id, idempotency_key_header, payload.client_message_id, request_hash, payload.reply_to_id
     )
     try:
         thread = _find_thread_for_message(session, payload.reply_to_id)
