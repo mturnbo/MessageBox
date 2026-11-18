@@ -151,6 +151,34 @@ def test_dummy_hash_uses_same_bcrypt_cost_as_real_hashes():
     assert auth_router.DUMMY_PASSWORD_HASH[:7] == real_hash[:7]
 
 
+def test_auth_password_over_72_bytes_returns_401(client, session):
+    make_user(session)
+    resp = client.post("/v1/auth", json={"username": "alice", "password": "a" * 73})
+    assert resp.status_code == 401
+
+
+def test_auth_multibyte_password_over_72_bytes_returns_401(client, session):
+    make_user(session)
+    resp = client.post("/v1/auth", json={"username": "alice", "password": "é" * 37})
+    assert resp.status_code == 401
+
+
+def test_auth_password_over_72_bytes_unknown_user_returns_401(client, session):
+    resp = client.post("/v1/auth", json={"username": "ghost", "password": "a" * 1000})
+    assert resp.status_code == 401
+
+
+def test_auth_multibyte_password_over_72_bytes_unknown_user_returns_401(client, session):
+    resp = client.post("/v1/auth", json={"username": "ghost", "password": "é" * 37})
+    assert resp.status_code == 401
+
+
+def test_auth_password_of_exactly_72_bytes_succeeds(client, session):
+    make_user(session, password="a" * 72)
+    resp = client.post("/v1/auth", json={"username": "alice", "password": "a" * 72})
+    assert resp.status_code == 200
+
+
 def test_auth_with_email(client, session):
     make_user(session, email="alice@example.com")
     resp = client.post("/v1/auth", json={"username": "alice@example.com", "password": "secret"})
