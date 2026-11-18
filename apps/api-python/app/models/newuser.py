@@ -1,10 +1,12 @@
 from pydantic import BaseModel
 
+from app.models.dbmodels import ShortText
+
 
 class NewUser(BaseModel):
-    username: str
+    username: ShortText
     password: str
-    first_name: str
-    last_name: str
-    email: str
-    device_address: str | None = None
+    first_name: ShortText
+    last_name: ShortText
+    email: ShortText
+    device_address: ShortText | None = None
