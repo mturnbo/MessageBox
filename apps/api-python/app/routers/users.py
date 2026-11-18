@@ -7,7 +7,7 @@ from sqlmodel import Session, select
 
 from app.database import get_session
 from app.limiter import API_RATE_LIMIT, AUTH_RATE_LIMIT, limiter
-from app.models.dbmodels import User, UserOut, UserUpdateRequest
+from app.models.dbmodels import User, UserOut, UserSummary, UserUpdateRequest
 from app.models.newuser import NewUser
 from app.utilites.password import generate_hashed_password, get_current_user
 
@@ -30,7 +30,18 @@ def _user_out(user: User) -> UserOut:
     )
 
 
-@router.get("/", response_model=list[UserOut])
+def _user_view(user: User, current_user: User) -> UserOut | UserSummary:
+    if user.id == current_user.id:
+        return _user_out(user)
+    return UserSummary(
+        id=user.id,
+        username=user.username,
+        first_name=user.first_name,
+        last_name=user.last_name,
+    )
+
+
+@router.get("/", response_model=list[UserOut | UserSummary])
 @limiter.limit(API_RATE_LIMIT)
 def get_all_users(
     request: Request,
@@ -40,10 +51,10 @@ def get_all_users(
     limit: int = Query(default=100, le=MAX_LIMIT),
 ):
     users = session.exec(select(User).offset(offset).limit(limit)).all()
-    return [_user_out(u) for u in users]
+    return [_user_view(u, current_user) for u in users]
 
 
-@router.get("/{limit}/{page}", response_model=list[UserOut])
+@router.get("/{limit}/{page}", response_model=list[UserOut | UserSummary])
 @limiter.limit(API_RATE_LIMIT)
 def get_all_users_paginated(
     request: Request,
@@ -54,10 +65,10 @@ def get_all_users_paginated(
 ):
     offset = (page - 1) * limit
     users = session.exec(select(User).offset(offset).limit(limit)).all()
-    return [_user_out(u) for u in users]
+    return [_user_view(u, current_user) for u in users]
 
 
-@router.get("/{user_id}", response_model=UserOut)
+@router.get("/{user_id}", response_model=UserOut | UserSummary)
 @limiter.limit(API_RATE_LIMIT)
 def get_user(
     request: Request,
@@ -76,7 +87,7 @@ def get_user(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    return _user_out(user)
+    return _user_view(user, current_user)
 
 
 @router.post("/register", response_model=UserOut, status_code=201)
