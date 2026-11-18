@@ -197,6 +197,50 @@ describe('ComposeModalComponent', () => {
       component.searchUsers({ query: 'carol', originalEvent: new Event('input') });
       expect(component.filteredUsers[0].username).toBe('carol');
     });
+
+    it('searchUsers() should match on email when present', async () => {
+      await createComponent();
+      setupDefaultSpies();
+      fixture.detectChanges();
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+      component.searchUsers({ query: 'carol@', originalEvent: new Event('input') });
+      expect(component.filteredUsers.map((u) => u.username)).toEqual(['carol']);
+    });
+
+    describe('when users have no email', () => {
+      const usersWithoutEmail: User[] = mockUsers.map((u) => ({
+        id: u.id,
+        username: u.username,
+        firstName: u.firstName,
+        lastName: u.lastName,
+      }));
+
+      async function setupWithoutEmail() {
+        await createComponent();
+        setupDefaultSpies();
+        vi.spyOn(userService, 'getAllUsers').mockReturnValue(of(usersWithoutEmail));
+        fixture.detectChanges();
+        await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      }
+
+      it('searchUsers() should still match on username and name', async () => {
+        await setupWithoutEmail();
+
+        component.searchUsers({ query: 'bob', originalEvent: new Event('input') });
+        expect(component.filteredUsers.map((u) => u.username)).toEqual(['bob']);
+
+        component.searchUsers({ query: 'carol white', originalEvent: new Event('input') });
+        expect(component.filteredUsers.map((u) => u.username)).toEqual(['carol']);
+      });
+
+      it('searchUsers() should return no users for a query matching nothing', async () => {
+        await setupWithoutEmail();
+
+        component.searchUsers({ query: 'zzz', originalEvent: new Event('input') });
+        expect(component.filteredUsers).toEqual([]);
+      });
+    });
   });
 
   describe('send message', () => {
