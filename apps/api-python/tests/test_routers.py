@@ -496,7 +496,7 @@ def test_register_accepts_username_with_digits_and_letters(client, session, user
         headers=auth_headers(),
         json={
             "username": username,
-            "password": "pw123",
+            "password": "password123",
             "first_name": "New",
             "last_name": "User",
             "email": "new@example.com",
