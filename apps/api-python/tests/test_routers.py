@@ -1256,3 +1256,137 @@ def test_cannot_delete_another_user(client, session, two_users):
     alice, bob = two_users
     resp = client.delete(f"/v1/users/delete/{bob.id}", headers=auth_headers("alice"))
     assert resp.status_code == 403
+
+
+# ── Request size limits ───────────────────────────────────────────────────────
+
+
+def _post_message(client, sender, recipient, headers=None, **fields):
+    return client.post(
+        "/v1/messages/post",
+        headers=headers or auth_headers(sender.username),
+        json={"sender_id": sender.id, "recipient_id": recipient.id, "body": "hi", **fields},
+    )
+
+
+def test_message_body_at_max_length_accepted(client, session, two_users):
+    alice, bob = two_users
+    resp = _post_message(client, alice, bob, body="x" * 10_000)
+    assert resp.status_code == 201
+
+
+def test_message_body_over_max_length_rejected(client, session, two_users):
+    alice, bob = two_users
+    resp = _post_message(client, alice, bob, body="x" * 10_001)
+    assert resp.status_code == 422
+    assert session.exec(select(Message)).first() is None
+
+
+@pytest.mark.parametrize("field", ["subject", "sender_address"])
+def test_message_short_fields_at_255_accepted(client, session, two_users, field):
+    alice, bob = two_users
+    resp = _post_message(client, alice, bob, **{field: "x" * 255})
+    assert resp.status_code == 201
+
+
+@pytest.mark.parametrize("field", ["subject", "sender_address"])
+def test_message_short_fields_over_255_rejected(client, session, two_users, field):
+    alice, bob = two_users
+    resp = _post_message(client, alice, bob, **{field: "x" * 256})
+    assert resp.status_code == 422
+
+
+def test_client_message_id_over_max_length_rejected(client, session, two_users):
+    alice, bob = two_users
+    assert _post_message(client, alice, bob, client_message_id="k" * 200).status_code == 201
+    assert _post_message(client, alice, bob, client_message_id="k" * 201).status_code == 422
+
+
+def test_idempotency_key_header_over_max_length_rejected(client, session, two_users):
+    alice, bob = two_users
+    ok = _post_message(client, alice, bob, headers={**auth_headers(), "Idempotency-Key": "k" * 200})
+    assert ok.status_code == 201
+    too_long = _post_message(client, alice, bob, headers={**auth_headers(), "Idempotency-Key": "k" * 201})
+    assert too_long.status_code == 422
+
+
+def test_reply_body_over_max_length_rejected(client, session, two_users):
+    alice, bob = two_users
+    parent = make_message(session, alice.id, bob.id)
+    resp = client.post(
+        "/v1/messages/reply",
+        headers=auth_headers("bob"),
+        json={"reply_to_id": parent.id, "sender_id": bob.id, "recipient_id": alice.id, "body": "x" * 10_001},
+    )
+    assert resp.status_code == 422
+
+
+def test_reply_idempotency_key_header_over_max_length_rejected(client, session, two_users):
+    alice, bob = two_users
+    parent = make_message(session, alice.id, bob.id)
+    resp = client.post(
+        "/v1/messages/reply",
+        headers={**auth_headers("bob"), "Idempotency-Key": "k" * 201},
+        json={"reply_to_id": parent.id, "sender_id": bob.id, "recipient_id": alice.id, "body": "hi"},
+    )
+    assert resp.status_code == 422
+
+
+def test_read_reader_address_over_255_rejected(client, session, two_users):
+    alice, bob = two_users
+    msg = make_message(session, alice.id, bob.id)
+    resp = client.post(
+        "/v1/messages/read",
+        headers=auth_headers("bob"),
+        json={"id": msg.id, "reader_address": "x" * 256},
+    )
+    assert resp.status_code == 422
+
+
+@pytest.mark.parametrize("field", ["username", "first_name", "last_name", "email", "device_address"])
+def test_register_field_over_255_rejected(client, session, field):
+    make_user(session)
+    payload = {
+        "username": "newuser",
+        "password": "password123",
+        "first_name": "New",
+        "last_name": "User",
+        "email": "new@example.com",
+        "device_address": "aa:bb",
+    }
+    payload[field] = "x" * 256
+    resp = client.post("/v1/users/register", headers=auth_headers(), json=payload)
+    assert resp.status_code == 422
+
+
+def test_register_fields_at_255_accepted(client, session):
+    make_user(session)
+    resp = client.post(
+        "/v1/users/register",
+        headers=auth_headers(),
+        json={
+            "username": "u" * 255,
+            "password": "password123",
+            "first_name": "f" * 255,
+            "last_name": "l" * 255,
+            "email": "new@example.com",
+            "device_address": "d" * 255,
+        },
+    )
+    assert resp.status_code == 201
+
+
+@pytest.mark.parametrize("field", ["username", "firstName", "lastName", "email", "deviceAddress"])
+def test_update_field_over_255_rejected(client, session, field):
+    alice = make_user(session)
+    resp = client.post(
+        "/v1/users/update",
+        headers=auth_headers(),
+        json={"id": alice.id, "userUpdate": {field: "x" * 256}},
+    )
+    assert resp.status_code == 422
+
+
+def test_login_username_over_255_rejected(client, session):
+    resp = client.post("/v1/auth", json={"username": "x" * 256, "password": "secret"})
+    assert resp.status_code == 422
