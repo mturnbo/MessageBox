@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr
 from pydantic.alias_generators import to_camel
 from sqlmodel import Field, SQLModel
 
-from app.models.newuser import Password
+from app.models.validators import Password
 
 
 class UserBase(SQLModel):
