@@ -16,9 +16,12 @@ ALGORITHM = "HS256"
 
 security = HTTPBearer()
 
+# Matches the cost the Node API uses, since both write to the same users table
+BCRYPT_ROUNDS = 12
+
 
 def generate_hashed_password(password):
-    salt = bcrypt.gensalt(rounds=10)
+    salt = bcrypt.gensalt(rounds=BCRYPT_ROUNDS)
     return bcrypt.hashpw(password.encode("utf-8"), salt).decode("utf-8")
 
 

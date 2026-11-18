@@ -1,3 +1,4 @@
+import bcrypt
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, create_engine, select
@@ -146,9 +147,29 @@ def test_auth_dummy_password_never_authenticates(client, session):
     assert resp.status_code == 401
 
 
+def bcrypt_cost(password_hash):
+    return int(password_hash.split("$")[2])
+
+
 def test_dummy_hash_uses_same_bcrypt_cost_as_real_hashes():
     real_hash = generate_hashed_password("secret")
-    assert auth_router.DUMMY_PASSWORD_HASH[:7] == real_hash[:7]
+    assert bcrypt_cost(auth_router.DUMMY_PASSWORD_HASH) == bcrypt_cost(real_hash)
+
+
+def test_dummy_hash_uses_same_bcrypt_cost_as_node_api_hashes():
+    node_hash = bcrypt.hashpw(b"secret", bcrypt.gensalt(rounds=12)).decode("utf-8")
+    assert bcrypt_cost(auth_router.DUMMY_PASSWORD_HASH) == bcrypt_cost(node_hash) == 12
+
+
+def test_auth_with_node_api_style_hash(client, session):
+    node_hash = bcrypt.hashpw(b"secret", bcrypt.gensalt(rounds=12)).decode("utf-8")
+    make_user(session)
+    user = session.exec(select(User).where(User.username == "alice")).one()
+    user.password_hash = node_hash
+    session.add(user)
+    session.commit()
+    assert client.post("/v1/auth", json={"username": "alice", "password": "secret"}).status_code == 200
+    assert client.post("/v1/auth", json={"username": "alice", "password": "wrong"}).status_code == 401
 
 
 def test_auth_password_over_72_bytes_returns_401(client, session):
