@@ -157,6 +157,65 @@ def test_auth_token_subject_is_user_id(client, session):
     assert decode_token(login.json()["refreshToken"])["sub"] == str(user.id)
 
 
+def _signed_token(user, **overrides):
+    from datetime import UTC, datetime, timedelta
+
+    import jwt
+
+    from app.config import JWT_AUDIENCE, JWT_ISSUER, JWT_SECRET
+
+    claims = {
+        **token_claims(user),
+        "exp": datetime.now(UTC) + timedelta(minutes=5),
+        "iss": JWT_ISSUER,
+        "aud": JWT_AUDIENCE,
+        **overrides,
+    }
+    claims = {k: v for k, v in claims.items() if v is not None}
+    return jwt.encode(claims, JWT_SECRET, algorithm="HS256")
+
+
+def test_issued_tokens_include_issuer_and_audience(client, session):
+    from app.config import JWT_AUDIENCE, JWT_ISSUER
+
+    make_user(session)
+    login = client.post("/v1/auth", json={"username": "alice", "password": "secret"}).json()
+    for token in (login["token"], login["refreshToken"]):
+        payload = decode_token(token)
+        assert payload["iss"] == JWT_ISSUER
+        assert payload["aud"] == JWT_AUDIENCE
+
+
+def test_token_with_matching_issuer_and_audience_accepted(client, session):
+    user = make_user(session)
+    resp = client.get("/v1/users/", headers={"Authorization": f"Bearer {_signed_token(user)}"})
+    assert resp.status_code == 200
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"iss": None},
+        {"aud": None},
+        {"iss": "some-other-service"},
+        {"aud": "some-other-audience"},
+    ],
+)
+def test_token_with_missing_or_wrong_issuer_or_audience_rejected(client, session, overrides):
+    user = make_user(session)
+    token = _signed_token(user, **overrides)
+    resp = client.get("/v1/users/", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 401
+    assert decode_token(token) is None
+
+
+def test_refresh_token_with_wrong_audience_rejected(client, session):
+    user = make_user(session)
+    token = _signed_token(user, type="refresh", aud="some-other-audience")
+    resp = client.post("/v1/auth/refresh", json={"refreshToken": token})
+    assert resp.status_code == 401
+
+
 def test_legacy_username_subject_token_rejected(client, session):
     make_user(session)
     token = create_access_token({"sub": "alice"})
