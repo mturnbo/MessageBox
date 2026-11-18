@@ -859,6 +859,101 @@ def test_create_message_idempotency_conflict(client, session, two_users):
     assert resp.status_code == 409
 
 
+def test_same_idempotency_key_from_different_senders_creates_separate_messages(client, session, two_users):
+    alice, bob = two_users
+    resp_alice = client.post(
+        "/v1/messages/post",
+        headers=auth_headers("alice"),
+        json={"sender_id": alice.id, "recipient_id": bob.id, "body": "from alice", "client_message_id": "shared-key"},
+    )
+    resp_bob = client.post(
+        "/v1/messages/post",
+        headers=auth_headers("bob"),
+        json={"sender_id": bob.id, "recipient_id": alice.id, "body": "from bob", "client_message_id": "shared-key"},
+    )
+    assert resp_alice.status_code == 201
+    assert resp_bob.status_code == 201
+    assert resp_bob.json()["idempotencyReplayed"] is False
+    assert resp_alice.json()["id"] != resp_bob.json()["id"]
+
+
+def test_idempotency_header_key_is_scoped_to_sender(client, session, two_users):
+    alice, bob = two_users
+    resp_alice = client.post(
+        "/v1/messages/post",
+        headers={**auth_headers("alice"), "Idempotency-Key": "header-key"},
+        json={"sender_id": alice.id, "recipient_id": bob.id, "body": "from alice"},
+    )
+    resp_bob = client.post(
+        "/v1/messages/post",
+        headers={**auth_headers("bob"), "Idempotency-Key": "header-key"},
+        json={"sender_id": bob.id, "recipient_id": alice.id, "body": "from bob"},
+    )
+    assert resp_alice.status_code == 201
+    assert resp_bob.status_code == 201
+
+
+def test_idempotency_key_stored_with_sender_prefix_and_returned_unprefixed(client, session, two_users):
+    alice, bob = two_users
+    resp = client.post(
+        "/v1/messages/post",
+        headers=auth_headers(),
+        json={"sender_id": alice.id, "recipient_id": bob.id, "body": "hi", "client_message_id": "my-key"},
+    )
+    assert resp.status_code == 201
+    assert resp.json()["clientMessageId"] == "my-key"
+    stored = session.get(Message, resp.json()["id"])
+    assert stored.client_message_id == f"{alice.id}:my-key"
+
+    message_id = resp.json()["id"]
+    assert client.get(f"/v1/messages/{message_id}", headers=auth_headers()).json()["clientMessageId"] == "my-key"
+    inbox = client.get(f"/v1/messages/inbox?recipientId={bob.id}", headers=auth_headers("bob")).json()
+    assert inbox["messages"][0]["clientMessageId"] == "my-key"
+    thread = client.get(f"/v1/messages/{message_id}/thread", headers=auth_headers()).json()
+    assert thread["messages"][0]["client_message_id"] == "my-key"
+
+
+def test_reply_idempotency_key_is_scoped_to_sender(client, session, two_users):
+    alice, bob = two_users
+    parent = make_message(session, alice.id, bob.id)
+    resp_bob = client.post(
+        "/v1/messages/reply",
+        headers=auth_headers("bob"),
+        json={
+            "reply_to_id": parent.id,
+            "sender_id": bob.id,
+            "recipient_id": alice.id,
+            "body": "bob reply",
+            "client_message_id": "reply-shared",
+        },
+    )
+    resp_alice = client.post(
+        "/v1/messages/reply",
+        headers=auth_headers("alice"),
+        json={
+            "reply_to_id": parent.id,
+            "sender_id": alice.id,
+            "recipient_id": bob.id,
+            "body": "alice reply",
+            "client_message_id": "reply-shared",
+        },
+    )
+    assert resp_bob.status_code == 201
+    assert resp_alice.status_code == 201
+    assert resp_alice.json()["clientMessageId"] == "reply-shared"
+
+
+def test_auto_idempotency_key_is_not_sender_prefixed(client, session, two_users):
+    alice, bob = two_users
+    resp = client.post(
+        "/v1/messages/post",
+        headers=auth_headers(),
+        json={"sender_id": alice.id, "recipient_id": bob.id, "body": "no key"},
+    )
+    assert resp.status_code == 201
+    assert resp.json()["clientMessageId"].startswith("auto:")
+
+
 def test_create_message_requires_auth(client, session, two_users):
     alice, bob = two_users
     resp = client.post(
