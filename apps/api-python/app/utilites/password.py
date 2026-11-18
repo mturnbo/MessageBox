@@ -8,7 +8,7 @@ from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlmodel import Session
 
-from app.config import JWT_SECRET
+from app.config import JWT_AUDIENCE, JWT_ISSUER, JWT_SECRET
 from app.database import get_session
 from app.models.dbmodels import User
 
@@ -30,7 +30,7 @@ def create_access_token(data: dict):
     to_encode = data.copy()
     exp_seconds = int(os.getenv("JWT_EXPIRATION_TIME", "86400"))
     expire = datetime.now(UTC) + timedelta(seconds=exp_seconds)
-    to_encode.update({"exp": expire})
+    to_encode.update({"exp": expire, "iss": JWT_ISSUER, "aud": JWT_AUDIENCE})
     return jwt.encode(to_encode, JWT_SECRET, algorithm=ALGORITHM)
 
 
@@ -38,13 +38,24 @@ def create_refresh_token(data: dict):
     to_encode = data.copy()
     exp_seconds = int(os.getenv("JWT_REFRESH_EXPIRATION_TIME", "604800"))
     expire = datetime.now(UTC) + timedelta(seconds=exp_seconds)
-    to_encode.update({"exp": expire, "type": "refresh"})
+    to_encode.update({"exp": expire, "type": "refresh", "iss": JWT_ISSUER, "aud": JWT_AUDIENCE})
     return jwt.encode(to_encode, JWT_SECRET, algorithm=ALGORITHM)
+
+
+def _decode(token_str: str) -> dict:
+    return jwt.decode(
+        token_str,
+        JWT_SECRET,
+        algorithms=[ALGORITHM],
+        issuer=JWT_ISSUER,
+        audience=JWT_AUDIENCE,
+        options={"require": ["exp", "iss", "aud", "sub"]},
+    )
 
 
 def decode_token(token_str: str):
     try:
-        return jwt.decode(token_str, JWT_SECRET, algorithms=[ALGORITHM])
+        return _decode(token_str)
     except jwt.PyJWTError:
         return None
 
@@ -70,7 +81,7 @@ def find_token_user(session: Session, payload: dict) -> User | None:
 
 def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
     try:
-        payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[ALGORITHM])
+        payload = _decode(credentials.credentials)
         if payload.get("type") == "refresh":
             raise HTTPException(status_code=401, detail="Could not validate credentials")
 
