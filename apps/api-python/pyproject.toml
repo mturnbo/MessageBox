@@ -34,7 +34,7 @@ dependencies = [
     "mdurl==0.1.2",
     "mysql-connector-python==9.5.0",
     "pipreqs==0.4.13",
-    "pycparser==2.23",
+    "pycparser==3.12",
     "pydantic==2.12.3",
     "pydantic-core==2.41.4",
     "pygments>=2.20.0",
