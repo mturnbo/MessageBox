@@ -112,7 +112,7 @@ export class ComposeModalComponent implements OnInit, OnChanges {
       (u) =>
         u.username.toLowerCase().includes(query) ||
         (u.firstName + ' ' + u.lastName).toLowerCase().includes(query) ||
-        u.email.toLowerCase().includes(query),
+        (u.email ?? '').toLowerCase().includes(query),
     );
   }
 
