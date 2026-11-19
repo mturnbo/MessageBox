@@ -65,7 +65,7 @@ def get_thread(
     if not message:
         raise HTTPException(status_code=404, detail="Message not found")
     if current_user.id not in (message.sender_id, message.recipient_id):
-        raise HTTPException(status_code=403, detail="Forbidden")
+        raise HTTPException(status_code=404, detail="Message not found")
     return message_service.get_thread_by_message_id(session, id)
 
 
@@ -81,7 +81,7 @@ def get_message(
     if not message:
         raise HTTPException(status_code=404, detail="Message not found")
     if current_user.id not in (message.sender_id, message.recipient_id):
-        raise HTTPException(status_code=403, detail="Forbidden")
+        raise HTTPException(status_code=404, detail="Message not found")
     return message
 
 
@@ -119,7 +119,7 @@ def reply_to_message(
     if not parent:
         raise HTTPException(status_code=404, detail="Message not found")
     if current_user.id not in (parent.sender_id, parent.recipient_id):
-        raise HTTPException(status_code=403, detail="Forbidden")
+        raise HTTPException(status_code=404, detail="Message not found")
     message, thread_id, reply_to, replayed = message_service.reply_to_message(session, payload, idempotency_key)
     if replayed:
         response.status_code = 200
@@ -145,7 +145,7 @@ def read_message(
     if not message:
         raise HTTPException(status_code=404, detail="Message not found")
     if current_user.id not in (message.sender_id, message.recipient_id):
-        raise HTTPException(status_code=403, detail="Forbidden")
+        raise HTTPException(status_code=404, detail="Message not found")
     message_service.read_message(session, payload.id, payload.reader_address)
     return {"status": "Message read successfully"}
 
@@ -164,5 +164,5 @@ def delete_message(
     if message is None:
         raise HTTPException(status_code=404, detail="Message not found")
     if status_msg is None:
-        raise HTTPException(status_code=403, detail="Not a party to this message")
+        raise HTTPException(status_code=404, detail="Message not found")
     return {"status": status_msg}

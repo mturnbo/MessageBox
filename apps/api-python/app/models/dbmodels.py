@@ -3,9 +3,11 @@
 from datetime import UTC, datetime
 from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, StringConstraints
+from pydantic import BaseModel, ConfigDict, StringConstraints, field_validator
 from pydantic.alias_generators import to_camel
 from sqlmodel import Field, SQLModel
+
+from app.models.validators import check_username
 
 # VARCHAR(255) columns
 MAX_STRING_LENGTH = 255
@@ -69,6 +71,13 @@ class UserUpdateFields(BaseModel):
     first_name: ShortText | None = None
     last_name: ShortText | None = None
     device_address: ShortText | None = None
+
+    @field_validator("username")
+    @classmethod
+    def username_not_id_or_email(cls, username: str | None) -> str | None:
+        if username is None:
+            return None
+        return check_username(username)
 
 
 class UserUpdateRequest(BaseModel):
