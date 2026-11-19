@@ -531,6 +531,97 @@ def test_get_all_users_path_pagination_requires_auth(client, session):
     assert resp.status_code == 401
 
 
+# ── Users: private fields hidden for other users ──────────────────────────────
+
+PRIVATE_USER_FIELDS = {"email", "deviceAddress", "dateCreated", "lastLogin"}
+SUMMARY_USER_FIELDS = {"id", "username", "firstName", "lastName"}
+
+
+def test_get_all_users_hides_private_fields_of_others(client, session, two_users):
+    resp = client.get("/v1/users/", headers=auth_headers("alice"))
+    assert resp.status_code == 200
+    by_username = {u["username"]: u for u in resp.json()}
+    assert set(by_username["bob"].keys()) == SUMMARY_USER_FIELDS
+    assert by_username["bob"]["firstName"] == "Alice"
+
+
+def test_get_all_users_keeps_own_full_record(client, session, two_users):
+    resp = client.get("/v1/users/", headers=auth_headers("alice"))
+    by_username = {u["username"]: u for u in resp.json()}
+    assert set(by_username["alice"].keys()) >= PRIVATE_USER_FIELDS
+    assert by_username["alice"]["email"] == "alice@example.com"
+    assert by_username["alice"]["deviceAddress"] == "aa:bb:cc:dd:ee:ff"
+
+
+def test_get_all_users_page_without_caller_is_all_summaries(client, session):
+    for i in range(5):
+        make_user(session, username=f"user{i}", email=f"user{i}@example.com")
+    resp = client.get("/v1/users/?offset=1", headers=auth_headers("user0"))
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data) == 4
+    for user in data:
+        assert set(user.keys()) == SUMMARY_USER_FIELDS
+
+
+def test_get_all_users_path_pagination_hides_private_fields_of_others(client, session, two_users):
+    resp = client.get("/v1/users/10/1", headers=auth_headers("alice"))
+    assert resp.status_code == 200
+    by_username = {u["username"]: u for u in resp.json()}
+    assert set(by_username["bob"].keys()) == SUMMARY_USER_FIELDS
+    assert by_username["alice"]["email"] == "alice@example.com"
+
+
+def test_get_all_users_path_pagination_other_page_is_all_summaries(client, session):
+    for i in range(5):
+        make_user(session, username=f"user{i}", email=f"user{i}@example.com")
+    resp = client.get("/v1/users/3/2", headers=auth_headers("user0"))
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data) == 2
+    for user in data:
+        assert set(user.keys()) == SUMMARY_USER_FIELDS
+
+
+def test_get_other_user_by_id_returns_summary(client, session, two_users):
+    _, bob = two_users
+    resp = client.get(f"/v1/users/{bob.id}", headers=auth_headers("alice"))
+    assert resp.status_code == 200
+    body = resp.json()
+    assert set(body.keys()) == SUMMARY_USER_FIELDS
+    assert body == {"id": bob.id, "username": "bob", "firstName": "Alice", "lastName": "Smith"}
+
+
+def test_get_other_user_by_username_returns_summary(client, session, two_users):
+    resp = client.get("/v1/users/bob", headers=auth_headers("alice"))
+    assert resp.status_code == 200
+    assert set(resp.json().keys()) == SUMMARY_USER_FIELDS
+
+
+def test_get_other_user_by_email_returns_summary(client, session, two_users):
+    resp = client.get("/v1/users/bob@example.com", headers=auth_headers("alice"))
+    assert resp.status_code == 200
+    body = resp.json()
+    assert set(body.keys()) == SUMMARY_USER_FIELDS
+    assert body["username"] == "bob"
+
+
+def test_get_own_user_returns_full_record(client, session, two_users):
+    alice, _ = two_users
+    for lookup in (str(alice.id), "alice", "alice@example.com"):
+        resp = client.get(f"/v1/users/{lookup}", headers=auth_headers("alice"))
+        assert resp.status_code == 200
+        body = resp.json()
+        assert set(body.keys()) >= PRIVATE_USER_FIELDS
+        assert body["email"] == "alice@example.com"
+        assert body["deviceAddress"] == "aa:bb:cc:dd:ee:ff"
+
+
+def test_get_other_user_not_found_still_404(client, session, two_users):
+    resp = client.get("/v1/users/nobody@example.com", headers=auth_headers("alice"))
+    assert resp.status_code == 404
+
+
 # ── POST /users/update ────────────────────────────────────────────────────────
 
 
