@@ -47,8 +47,8 @@ def get_all_users(
     request: Request,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
-    offset: int = 0,
-    limit: int = Query(default=100, le=MAX_LIMIT),
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=MAX_LIMIT),
 ):
     users = session.exec(select(User).offset(offset).limit(limit)).all()
     return [_user_view(u, current_user) for u in users]

@@ -375,6 +375,27 @@ def test_get_all_users_offset(client, session):
     assert len(resp.json()) == 2
 
 
+def test_get_all_users_offset_and_limit_bounds_accepted(client, session):
+    make_user(session)
+    make_user(session, username="bob", email="bob@example.com")
+    resp = client.get("/v1/users/?offset=0&limit=1", headers=auth_headers())
+    assert resp.status_code == 200
+    assert len(resp.json()) == 1
+    resp = client.get("/v1/users/?offset=1&limit=100", headers=auth_headers())
+    assert resp.status_code == 200
+    assert len(resp.json()) == 1
+
+
+@pytest.mark.parametrize(
+    "query",
+    ["offset=-1", "limit=0", "limit=-5", "limit=101"],
+)
+def test_get_all_users_rejects_out_of_range_pagination(client, session, query):
+    make_user(session)
+    resp = client.get(f"/v1/users/?{query}", headers=auth_headers())
+    assert resp.status_code == 422
+
+
 # ── GET /users/{user_id} ──────────────────────────────────────────────────────
 
 
