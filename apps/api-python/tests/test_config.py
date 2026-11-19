@@ -58,3 +58,33 @@ def test_sql_echo_disabled_for_other_values(monkeypatch, value):
 
 def test_engine_echo_follows_sql_echo_setting():
     assert engine.echo is sql_echo_enabled()
+
+
+def test_rate_limit_storage_defaults_to_memory(monkeypatch):
+    import importlib
+
+    import app.limiter as limiter_module
+
+    monkeypatch.delenv("RATE_LIMIT_STORAGE_URI", raising=False)
+    reloaded = importlib.reload(limiter_module)
+    try:
+        assert reloaded.RATE_LIMIT_STORAGE_URI == "memory://"
+        assert reloaded.limiter._storage_uri == "memory://"
+    finally:
+        monkeypatch.undo()
+        importlib.reload(limiter_module)
+
+
+def test_rate_limit_storage_uses_env_value(monkeypatch):
+    import importlib
+
+    import app.limiter as limiter_module
+
+    monkeypatch.setenv("RATE_LIMIT_STORAGE_URI", "memory://?shared=1")
+    reloaded = importlib.reload(limiter_module)
+    try:
+        assert reloaded.RATE_LIMIT_STORAGE_URI == "memory://?shared=1"
+        assert reloaded.limiter._storage_uri == "memory://?shared=1"
+    finally:
+        monkeypatch.undo()
+        importlib.reload(limiter_module)
