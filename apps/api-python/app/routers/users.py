@@ -136,6 +136,15 @@ def update_user(
 
     fields = payload.user_update
     if fields.username is not None:
+        existing = session.exec(select(User).where(User.username == fields.username)).first()
+        if existing and existing.id != user.id:
+            raise HTTPException(status_code=400, detail="Username already exists")
+    if fields.email is not None:
+        existing = session.exec(select(User).where(User.email == fields.email)).first()
+        if existing and existing.id != user.id:
+            raise HTTPException(status_code=400, detail="Email already exists")
+
+    if fields.username is not None:
         user.username = fields.username
     if fields.email is not None:
         user.email = fields.email
