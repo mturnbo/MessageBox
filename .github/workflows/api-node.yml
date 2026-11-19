@@ -1,0 +1,39 @@
+name: api-node
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/api-node/**"
+      - ".github/workflows/api-node.yml"
+  pull_request:
+    paths:
+      - "apps/api-node/**"
+      - ".github/workflows/api-node.yml"
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: apps/api-node
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/api-node/package-lock.json
+      - run: npm ci
+      - run: cp .env.sample .env
+      - run: npm test
+
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: npm audit --audit-level=high --omit=dev
