@@ -90,6 +90,29 @@ def test_auth_unknown_user(client, session):
     assert resp.status_code == 401
 
 
+def test_auth_password_over_72_bytes_returns_401(client, session):
+    make_user(session)
+    resp = client.post("/v1/auth", json={"username": "alice", "password": "a" * 73})
+    assert resp.status_code == 401
+
+
+def test_auth_multibyte_password_over_72_bytes_returns_401(client, session):
+    make_user(session)
+    resp = client.post("/v1/auth", json={"username": "alice", "password": "é" * 37})
+    assert resp.status_code == 401
+
+
+def test_auth_password_over_72_bytes_unknown_user_returns_401(client, session):
+    resp = client.post("/v1/auth", json={"username": "ghost", "password": "a" * 1000})
+    assert resp.status_code == 401
+
+
+def test_auth_password_of_exactly_72_bytes_succeeds(client, session):
+    make_user(session, password="a" * 72)
+    resp = client.post("/v1/auth", json={"username": "alice", "password": "a" * 72})
+    assert resp.status_code == 200
+
+
 def test_auth_with_email(client, session):
     make_user(session, email="alice@example.com")
     resp = client.post("/v1/auth", json={"username": "alice@example.com", "password": "secret"})
@@ -352,6 +375,27 @@ def test_get_all_users_offset(client, session):
     assert len(resp.json()) == 2
 
 
+def test_get_all_users_offset_and_limit_bounds_accepted(client, session):
+    make_user(session)
+    make_user(session, username="bob", email="bob@example.com")
+    resp = client.get("/v1/users/?offset=0&limit=1", headers=auth_headers())
+    assert resp.status_code == 200
+    assert len(resp.json()) == 1
+    resp = client.get("/v1/users/?offset=1&limit=100", headers=auth_headers())
+    assert resp.status_code == 200
+    assert len(resp.json()) == 1
+
+
+@pytest.mark.parametrize(
+    "query",
+    ["offset=-1", "limit=0", "limit=-5", "limit=101"],
+)
+def test_get_all_users_rejects_out_of_range_pagination(client, session, query):
+    make_user(session)
+    resp = client.get(f"/v1/users/?{query}", headers=auth_headers())
+    assert resp.status_code == 422
+
+
 # ── GET /users/{user_id} ──────────────────────────────────────────────────────
 
 
@@ -468,6 +512,42 @@ def test_register_requires_auth(client):
         },
     )
     assert resp.status_code == 401
+
+
+@pytest.mark.parametrize("username", ["12345", "0", "+5", " 7 ", "bob@example.com", "@", "a@b"])
+def test_register_rejects_numeric_or_email_like_username(client, session, username):
+    make_user(session)
+    resp = client.post(
+        "/v1/users/register",
+        headers=auth_headers(),
+        json={
+            "username": username,
+            "password": "pw123",
+            "first_name": "New",
+            "last_name": "User",
+            "email": "new@example.com",
+        },
+    )
+    assert resp.status_code == 422
+    assert session.exec(select(User).where(User.email == "new@example.com")).first() is None
+
+
+@pytest.mark.parametrize("username", ["user1", "1user", "12a", "a.b-c"])
+def test_register_accepts_username_with_digits_and_letters(client, session, username):
+    make_user(session)
+    resp = client.post(
+        "/v1/users/register",
+        headers=auth_headers(),
+        json={
+            "username": username,
+            "password": "password123",
+            "first_name": "New",
+            "last_name": "User",
+            "email": "new@example.com",
+        },
+    )
+    assert resp.status_code == 201
+    assert resp.json()["username"] == username
 
 
 # ── GET /users/{limit}/{page} ─────────────────────────────────────────────────
@@ -618,6 +698,99 @@ def test_update_user_requires_auth(client, session):
     assert resp.status_code == 401
 
 
+def test_update_username(client, session):
+    user = make_user(session)
+    resp = client.post(
+        "/v1/users/update",
+        headers=auth_headers(),
+        json={"id": user.id, "userUpdate": {"username": "alice2"}},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["username"] == "alice2"
+
+
+def test_update_username_taken_by_other_user(client, session):
+    user = make_user(session)
+    make_user(session, username="bob", email="bob@example.com")
+    resp = client.post(
+        "/v1/users/update",
+        headers=auth_headers(),
+        json={"id": user.id, "userUpdate": {"username": "bob"}},
+    )
+    assert resp.status_code == 400
+    assert resp.json()["error"]["message"] == "Username already exists"
+    session.refresh(user)
+    assert user.username == "alice"
+
+
+def test_update_email_taken_by_other_user(client, session):
+    user = make_user(session)
+    make_user(session, username="bob", email="bob@example.com")
+    resp = client.post(
+        "/v1/users/update",
+        headers=auth_headers(),
+        json={"id": user.id, "userUpdate": {"email": "bob@example.com"}},
+    )
+    assert resp.status_code == 400
+    assert resp.json()["error"]["message"] == "Email already exists"
+    session.refresh(user)
+    assert user.email == "alice@example.com"
+
+
+def test_update_taken_email_does_not_apply_other_fields(client, session):
+    user = make_user(session)
+    make_user(session, username="bob", email="bob@example.com")
+    resp = client.post(
+        "/v1/users/update",
+        headers=auth_headers(),
+        json={"id": user.id, "userUpdate": {"username": "alice2", "email": "bob@example.com"}},
+    )
+    assert resp.status_code == 400
+    session.refresh(user)
+    assert user.username == "alice"
+
+
+def test_update_to_own_current_username_and_email(client, session):
+    user = make_user(session)
+    make_user(session, username="bob", email="bob@example.com")
+    resp = client.post(
+        "/v1/users/update",
+        headers=auth_headers(),
+        json={"id": user.id, "userUpdate": {"username": "alice", "email": "alice@example.com", "firstName": "Al"}},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["username"] == "alice"
+    assert body["email"] == "alice@example.com"
+    assert body["firstName"] == "Al"
+
+
+@pytest.mark.parametrize("username", ["12345", "0", "+5", "bob@example.com", "@", "a@b"])
+def test_update_rejects_numeric_or_email_like_username(client, session, username):
+    user = make_user(session)
+    resp = client.post(
+        "/v1/users/update",
+        headers=auth_headers(),
+        json={"id": user.id, "userUpdate": {"username": username}},
+    )
+    assert resp.status_code == 422
+    session.refresh(user)
+    assert user.username == "alice"
+
+
+def test_update_username_to_other_users_id_rejected(client, session):
+    user = make_user(session)
+    bob = make_user(session, username="bob", email="bob@example.com")
+    resp = client.post(
+        "/v1/users/update",
+        headers=auth_headers(),
+        json={"id": user.id, "userUpdate": {"username": str(bob.id)}},
+    )
+    assert resp.status_code == 422
+    lookup = client.get(f"/v1/users/{bob.id}", headers=auth_headers())
+    assert lookup.json()["username"] == "bob"
+
+
 # ── DELETE /users/delete/{id} ─────────────────────────────────────────────────
 
 
@@ -642,6 +815,33 @@ def test_delete_user_requires_auth(client, session):
     user = make_user(session)
     resp = client.delete(f"/v1/users/delete/{user.id}")
     assert resp.status_code == 401
+
+
+def test_unhandled_exception_returns_500_error_envelope(client, session, monkeypatch):
+    from app.services import message_service
+
+    make_user(session)
+
+    def boom(*args, **kwargs):
+        raise RuntimeError("database password is hunter2")
+
+    monkeypatch.setattr(message_service, "get_message_by_id", boom)
+    safe_client = TestClient(app, raise_server_exceptions=False)
+    resp = safe_client.get("/v1/messages/1", headers=auth_headers())
+    assert resp.status_code == 500
+    assert resp.json() == {"error": {"message": "Internal Server Error"}}
+    assert "hunter2" not in resp.text
+
+
+def test_unhandled_exception_of_another_type_returns_500_error_envelope(client, session, monkeypatch):
+    from app.services import message_service
+
+    make_user(session)
+    monkeypatch.setattr(message_service, "get_message_by_id", lambda *a, **k: 1 / 0)
+    safe_client = TestClient(app, raise_server_exceptions=False)
+    resp = safe_client.get("/v1/messages/1", headers=auth_headers())
+    assert resp.status_code == 500
+    assert resp.json() == {"error": {"message": "Internal Server Error"}}
 
 
 # ── GET /health ───────────────────────────────────────────────────────────────
@@ -705,6 +905,16 @@ def test_get_message_by_id_not_found(client, session):
     assert resp.status_code == 404
 
 
+def test_get_message_non_party_response_matches_missing_message(client, session, two_users):
+    alice, bob = two_users
+    make_user(session, username="carol", email="carol@example.com")
+    msg = make_message(session, alice.id, bob.id)
+    other = client.get(f"/v1/messages/{msg.id}", headers=auth_headers("carol"))
+    missing = client.get("/v1/messages/99999", headers=auth_headers("carol"))
+    assert other.status_code == missing.status_code == 404
+    assert other.json() == missing.json()
+
+
 def test_get_message_by_id_requires_auth(client, session, two_users):
     alice, bob = two_users
     msg = make_message(session, alice.id, bob.id)
@@ -712,12 +922,13 @@ def test_get_message_by_id_requires_auth(client, session, two_users):
     assert resp.status_code == 401
 
 
-def test_get_message_by_id_forbidden_for_non_party(client, session, two_users):
+def test_get_message_by_id_not_found_for_non_party(client, session, two_users):
     alice, bob = two_users
     make_user(session, username="carol", email="carol@example.com")
     msg = make_message(session, alice.id, bob.id)
     resp = client.get(f"/v1/messages/{msg.id}", headers=auth_headers("carol"))
-    assert resp.status_code == 403
+    assert resp.status_code == 404
+    assert resp.json() == {"error": {"message": "Message not found"}}
 
 
 # ── GET /messages/sent ────────────────────────────────────────────────────────
@@ -1077,12 +1288,13 @@ def test_get_thread_requires_auth(client, session, two_users):
     assert resp.status_code == 401
 
 
-def test_get_thread_forbidden_for_non_party(client, session, two_users):
+def test_get_thread_not_found_for_non_party(client, session, two_users):
     alice, bob = two_users
     make_user(session, username="carol", email="carol@example.com")
     msg = make_message(session, alice.id, bob.id)
     resp = client.get(f"/v1/messages/{msg.id}/thread", headers=auth_headers("carol"))
-    assert resp.status_code == 403
+    assert resp.status_code == 404
+    assert resp.json() == {"error": {"message": "Message not found"}}
 
 
 # ── POST /messages/read ───────────────────────────────────────────────────────
@@ -1117,7 +1329,7 @@ def test_read_message_requires_auth(client, session, two_users):
     assert resp.status_code == 401
 
 
-def test_read_message_forbidden_for_non_party(client, session, two_users):
+def test_read_message_not_found_for_non_party(client, session, two_users):
     alice, bob = two_users
     make_user(session, username="carol", email="carol@example.com")
     msg = make_message(session, alice.id, bob.id)
@@ -1126,7 +1338,8 @@ def test_read_message_forbidden_for_non_party(client, session, two_users):
         headers=auth_headers("carol"),
         json={"id": msg.id, "reader_address": "1.2.3.4"},
     )
-    assert resp.status_code == 403
+    assert resp.status_code == 404
+    assert resp.json() == {"error": {"message": "Message not found"}}
 
 
 # ── POST /messages/delete ─────────────────────────────────────────────────────
@@ -1165,7 +1378,8 @@ def test_delete_message_not_a_party(client, session, two_users):
         headers=auth_headers("carol"),
         json={"id": msg.id, "deleted_by": carol.id},
     )
-    assert resp.status_code == 403
+    assert resp.status_code == 404
+    assert resp.json() == {"error": {"message": "Message not found"}}
 
 
 def test_delete_message_not_found(client, session):
@@ -1280,7 +1494,8 @@ def test_cannot_reply_to_message_as_non_party(client, session, two_users):
         headers=auth_headers("carol"),
         json={"reply_to_id": parent.id, "sender_id": carol.id, "recipient_id": alice.id, "body": "intrude"},
     )
-    assert resp.status_code == 403
+    assert resp.status_code == 404
+    assert resp.json() == {"error": {"message": "Message not found"}}
     assert session.exec(select(Message).where(Message.sender_id == carol.id)).first() is None
 
 
@@ -1298,7 +1513,8 @@ def test_non_party_cannot_read_thread_via_own_reply(client, session, two_users):
         headers=auth_headers("carol"),
         json={"reply_to_id": parent.id, "sender_id": carol.id, "recipient_id": carol.id, "body": "x"},
     )
-    assert resp.status_code == 403
+    assert resp.status_code == 404
+    assert resp.json() == {"error": {"message": "Message not found"}}
     thread = client.get(f"/v1/messages/{parent.id}/thread", headers=auth_headers("alice")).json()
     assert len(thread["messages"]) == 2
     assert all(m["sender_id"] != carol.id for m in thread["messages"])

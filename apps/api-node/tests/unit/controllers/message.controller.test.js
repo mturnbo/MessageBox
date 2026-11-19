@@ -474,6 +474,50 @@ describe('MessageController', () => {
       expect(res.json).toHaveBeenCalledWith({ error: { message: 'Forbidden' } });
     });
 
+    it('should return 403 and not mark read when the authenticated user is the sender', async () => {
+      const mockMessage = {
+        id: 1,
+        senderId: 100,
+        recipientId: 200,
+        readAt: null,
+        readerAddress: null,
+        save: jest.fn().mockResolvedValue(true)
+      };
+
+      req.body = { id: 1, readerAddress: '192.168.1.1' };
+      req.user = { id: 100 };
+      sandbox.stub(Message, 'findByPk').resolves(mockMessage);
+
+      await MessageController.readMessage(req, res);
+
+      expect(mockMessage.readAt).toBeNull();
+      expect(mockMessage.readerAddress).toBeNull();
+      expect(mockMessage.save).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith({ error: { message: 'Forbidden' } });
+    });
+
+    it('should mark a self-addressed message as read', async () => {
+      const mockMessage = {
+        id: 1,
+        senderId: 100,
+        recipientId: 100,
+        readAt: null,
+        readerAddress: null,
+        save: jest.fn().mockResolvedValue(true)
+      };
+
+      req.body = { id: 1, readerAddress: '192.168.1.1' };
+      req.user = { id: 100 };
+      sandbox.stub(Message, 'findByPk').resolves(mockMessage);
+
+      await MessageController.readMessage(req, res);
+
+      expect(mockMessage.readAt).toBe('2024-01-01 12:00:00');
+      expect(mockMessage.save).toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
+
     it('should handle errors when reading message', async () => {
       req.body = { id: 1, readerAddress: '192.168.1.1' };
       sandbox.stub(Message, 'findByPk').rejects(new Error('Database error'));

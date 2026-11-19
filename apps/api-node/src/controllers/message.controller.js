@@ -350,7 +350,7 @@ const MessageController = {
       if (!message) {
         return sendError(res, 404, 'Message not found');
       }
-      if (req.user.id !== message.senderId && req.user.id !== message.recipientId) {
+      if (req.user.id !== message.recipientId) {
         return sendError(res, 403, 'Forbidden');
       }
       message.readAt = formatTimestamp();
