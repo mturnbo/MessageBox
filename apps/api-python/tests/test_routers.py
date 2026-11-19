@@ -857,6 +857,16 @@ def test_get_message_by_id_not_found(client, session):
     assert resp.status_code == 404
 
 
+def test_get_message_non_party_response_matches_missing_message(client, session, two_users):
+    alice, bob = two_users
+    make_user(session, username="carol", email="carol@example.com")
+    msg = make_message(session, alice.id, bob.id)
+    other = client.get(f"/v1/messages/{msg.id}", headers=auth_headers("carol"))
+    missing = client.get("/v1/messages/99999", headers=auth_headers("carol"))
+    assert other.status_code == missing.status_code == 404
+    assert other.json() == missing.json()
+
+
 def test_get_message_by_id_requires_auth(client, session, two_users):
     alice, bob = two_users
     msg = make_message(session, alice.id, bob.id)
@@ -864,12 +874,13 @@ def test_get_message_by_id_requires_auth(client, session, two_users):
     assert resp.status_code == 401
 
 
-def test_get_message_by_id_forbidden_for_non_party(client, session, two_users):
+def test_get_message_by_id_not_found_for_non_party(client, session, two_users):
     alice, bob = two_users
     make_user(session, username="carol", email="carol@example.com")
     msg = make_message(session, alice.id, bob.id)
     resp = client.get(f"/v1/messages/{msg.id}", headers=auth_headers("carol"))
-    assert resp.status_code == 403
+    assert resp.status_code == 404
+    assert resp.json() == {"error": {"message": "Message not found"}}
 
 
 # ── GET /messages/sent ────────────────────────────────────────────────────────
@@ -1134,12 +1145,13 @@ def test_get_thread_requires_auth(client, session, two_users):
     assert resp.status_code == 401
 
 
-def test_get_thread_forbidden_for_non_party(client, session, two_users):
+def test_get_thread_not_found_for_non_party(client, session, two_users):
     alice, bob = two_users
     make_user(session, username="carol", email="carol@example.com")
     msg = make_message(session, alice.id, bob.id)
     resp = client.get(f"/v1/messages/{msg.id}/thread", headers=auth_headers("carol"))
-    assert resp.status_code == 403
+    assert resp.status_code == 404
+    assert resp.json() == {"error": {"message": "Message not found"}}
 
 
 # ── POST /messages/read ───────────────────────────────────────────────────────
@@ -1174,7 +1186,7 @@ def test_read_message_requires_auth(client, session, two_users):
     assert resp.status_code == 401
 
 
-def test_read_message_forbidden_for_non_party(client, session, two_users):
+def test_read_message_not_found_for_non_party(client, session, two_users):
     alice, bob = two_users
     make_user(session, username="carol", email="carol@example.com")
     msg = make_message(session, alice.id, bob.id)
@@ -1183,7 +1195,8 @@ def test_read_message_forbidden_for_non_party(client, session, two_users):
         headers=auth_headers("carol"),
         json={"id": msg.id, "reader_address": "1.2.3.4"},
     )
-    assert resp.status_code == 403
+    assert resp.status_code == 404
+    assert resp.json() == {"error": {"message": "Message not found"}}
 
 
 # ── POST /messages/delete ─────────────────────────────────────────────────────
@@ -1222,7 +1235,8 @@ def test_delete_message_not_a_party(client, session, two_users):
         headers=auth_headers("carol"),
         json={"id": msg.id, "deleted_by": carol.id},
     )
-    assert resp.status_code == 403
+    assert resp.status_code == 404
+    assert resp.json() == {"error": {"message": "Message not found"}}
 
 
 def test_delete_message_not_found(client, session):
@@ -1337,7 +1351,8 @@ def test_cannot_reply_to_message_as_non_party(client, session, two_users):
         headers=auth_headers("carol"),
         json={"reply_to_id": parent.id, "sender_id": carol.id, "recipient_id": alice.id, "body": "intrude"},
     )
-    assert resp.status_code == 403
+    assert resp.status_code == 404
+    assert resp.json() == {"error": {"message": "Message not found"}}
     assert session.exec(select(Message).where(Message.sender_id == carol.id)).first() is None
 
 
@@ -1355,7 +1370,8 @@ def test_non_party_cannot_read_thread_via_own_reply(client, session, two_users):
         headers=auth_headers("carol"),
         json={"reply_to_id": parent.id, "sender_id": carol.id, "recipient_id": carol.id, "body": "x"},
     )
-    assert resp.status_code == 403
+    assert resp.status_code == 404
+    assert resp.json() == {"error": {"message": "Message not found"}}
     thread = client.get(f"/v1/messages/{parent.id}/thread", headers=auth_headers("alice")).json()
     assert len(thread["messages"]) == 2
     assert all(m["sender_id"] != carol.id for m in thread["messages"])
