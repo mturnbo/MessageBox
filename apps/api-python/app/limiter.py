@@ -13,4 +13,6 @@ _api_window_ms = int(os.getenv("API_RATE_LIMIT_WINDOW_MS", "60000"))
 _api_window_minutes = max(1, _api_window_ms // 60000)
 API_RATE_LIMIT = f"{_api_max}/{_api_window_minutes} minute"
 
-limiter = Limiter(key_func=get_remote_address)
+RATE_LIMIT_STORAGE_URI = os.getenv("RATE_LIMIT_STORAGE_URI", "memory://")
+
+limiter = Limiter(key_func=get_remote_address, storage_uri=RATE_LIMIT_STORAGE_URI)
