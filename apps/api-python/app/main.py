@@ -62,6 +62,11 @@ async def rate_limit_exception_handler(request: Request, exc: RateLimitExceeded)
     return JSONResponse(status_code=429, content={"error": {"message": f"Rate limit exceeded: {exc.detail}"}})
 
 
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(status_code=500, content={"error": {"message": "Internal Server Error"}})
+
+
 app.state.limiter = limiter
 app.add_middleware(SlowAPIMiddleware)
 app.add_middleware(RequestLoggingMiddleware)

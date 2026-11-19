@@ -47,8 +47,8 @@ def get_all_users(
     request: Request,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
-    offset: int = 0,
-    limit: int = Query(default=100, le=MAX_LIMIT),
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=MAX_LIMIT),
 ):
     users = session.exec(select(User).offset(offset).limit(limit)).all()
     return [_user_view(u, current_user) for u in users]
@@ -135,6 +135,15 @@ def update_user(
         raise HTTPException(status_code=404, detail="User not found")
 
     fields = payload.user_update
+    if fields.username is not None:
+        existing = session.exec(select(User).where(User.username == fields.username)).first()
+        if existing and existing.id != user.id:
+            raise HTTPException(status_code=400, detail="Username already exists")
+    if fields.email is not None:
+        existing = session.exec(select(User).where(User.email == fields.email)).first()
+        if existing and existing.id != user.id:
+            raise HTTPException(status_code=400, detail="Email already exists")
+
     if fields.username is not None:
         user.username = fields.username
     if fields.email is not None:

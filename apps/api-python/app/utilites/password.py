@@ -22,8 +22,14 @@ def generate_hashed_password(password):
     return bcrypt.hashpw(password.encode("utf-8"), salt).decode("utf-8")
 
 
+BCRYPT_MAX_PASSWORD_BYTES = 72
+
+
 def compare_password(password, hashed_password):
-    return bcrypt.checkpw(password.encode("utf-8"), hashed_password.encode("utf-8"))
+    password_bytes = password.encode("utf-8")
+    if len(password_bytes) > BCRYPT_MAX_PASSWORD_BYTES:
+        return False
+    return bcrypt.checkpw(password_bytes, hashed_password.encode("utf-8"))
 
 
 def create_access_token(data: dict):

@@ -51,6 +51,9 @@ uv run pytest tests/ -v    # specific directory
 | `PORT`                         | Port to listen on in production (default `3000`)        |
 | `ORIGIN`                       | Allowed CORS origin port (default `4000`)               |
 | `ENV`                          | `production` disables `/docs`, `/redoc` and `/openapi.json` |
+| `RATE_LIMIT_STORAGE_URI`       | Rate limit counter storage (default `memory://`)        |
+
+The default `memory://` storage keeps rate limit counters per process. When running more than one process (for example PM2 cluster mode with `instances` above 1), point `RATE_LIMIT_STORAGE_URI` at shared storage such as `redis://localhost:6379` so limits apply across all processes. Redis storage needs the `redis` package (`uv add redis`).
 
 ## Authentication
 
