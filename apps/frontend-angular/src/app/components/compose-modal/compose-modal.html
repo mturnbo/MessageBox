@@ -53,7 +53,9 @@
               </div>
               <div>
                 <div class="mb-compose-form__user-name">{{ getUserLabel(user) }}</div>
-                <div class="mb-compose-form__user-email">{{ user.email }}</div>
+                @if (user.email) {
+                  <div class="mb-compose-form__user-email">{{ user.email }}</div>
+                }
               </div>
             </div>
           </ng-template>

@@ -17,3 +17,13 @@ Password = Annotated[
     StringConstraints(min_length=PASSWORD_MIN_LENGTH),
     AfterValidator(check_password_byte_length),
 ]
+
+
+def check_username(username: str) -> str:
+    if "@" in username:
+        raise ValueError("Username must not contain '@'")
+    try:
+        int(username)
+    except ValueError:
+        return username
+    raise ValueError("Username must not be numeric")
