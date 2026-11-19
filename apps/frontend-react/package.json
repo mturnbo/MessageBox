@@ -23,6 +23,7 @@
     "@storybook/addon-onboarding": "^10.0.4",
     "@storybook/addon-vitest": "^10.0.4",
     "@storybook/react-vite": "^10.0.4",
+    "@tailwindcss/vite": "^4.3.5",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
@@ -41,16 +42,15 @@
     "prettier": "^3.6.2",
     "prop-types": "^15.8.1",
     "storybook": "^10.0.4",
+    "tailwindcss": "^4.3.5",
     "vite": "^7.3.8",
     "vitest": "^4.0.7"
   },
   "dependencies": {
-    "@tailwindcss/vite": "^4.1.16",
     "primeicons": "^7.0.0",
     "primereact": "^10.9.8",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
-    "react-router-dom": "^7.18.5",
-    "tailwindcss": "^4.1.16"
+    "react-router-dom": "^7.18.5"
   }
 }
