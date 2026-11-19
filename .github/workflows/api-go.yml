@@ -1,0 +1,44 @@
+name: api-go
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/api-go/**"
+      - ".github/workflows/api-go.yml"
+  pull_request:
+    paths:
+      - "apps/api-go/**"
+      - ".github/workflows/api-go.yml"
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: apps/api-go
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: apps/api-go/go.mod
+          cache-dependency-path: apps/api-go/go.sum
+      - name: gofmt
+        run: test -z "$(gofmt -l .)" || (gofmt -l . && exit 1)
+      - run: go vet ./...
+      - run: go build ./...
+      - run: go test ./...
+
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: apps/api-go/go.mod
+          cache-dependency-path: apps/api-go/go.sum
+      - run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
