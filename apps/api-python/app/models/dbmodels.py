@@ -41,6 +41,14 @@ class UserOut(BaseModel):
     last_login: datetime | None = None
 
 
+class UserSummary(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+    id: int
+    username: str
+    first_name: str
+    last_name: str
+
+
 class UserUpdateFields(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
     username: str | None = None
