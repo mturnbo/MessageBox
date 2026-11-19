@@ -241,7 +241,7 @@ Reply to an existing message. Creates or joins a thread.
 
 #### `POST /v1/messages/read`
 
-Mark a message as read.
+Mark a message as read. Only the message's recipient can do this; anyone else gets `403`.
 
 **Request body:**
 ```json

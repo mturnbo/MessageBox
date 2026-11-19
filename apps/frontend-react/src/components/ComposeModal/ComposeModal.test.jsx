@@ -16,15 +16,19 @@ const MOCK_USERS = [
   { id: 10, username: 'bob', firstName: 'Bob', lastName: 'Smith', email: 'bob@example.com' },
   { id: 11, username: 'carol', firstName: 'Carol', lastName: 'Jones', email: 'carol@example.com' },
 ];
+const MOCK_USERS_WITHOUT_EMAIL = [
+  { id: 10, username: 'bob', firstName: 'Bob', lastName: 'Smith' },
+  { id: 11, username: 'carol', firstName: 'Carol', lastName: 'Jones' },
+];
 
 const showToast = vi.fn();
 const setSentTotal = vi.fn();
 const onHide = vi.fn();
 
-function renderModal(visible = true) {
+function renderModal(visible = true, users = MOCK_USERS) {
   vi.spyOn(AuthContextModule, 'useAuth').mockReturnValue({ user: MOCK_USER });
   vi.spyOn(NotificationContextModule, 'useNotifications').mockReturnValue({ showToast, setSentTotal });
-  vi.mocked(userService.getUsers).mockResolvedValue(MOCK_USERS);
+  vi.mocked(userService.getUsers).mockResolvedValue(users);
   return render(
     <PrimeReactProvider>
       <ComposeModal visible={visible} onHide={onHide} />
@@ -68,6 +72,39 @@ describe('ComposeModal', () => {
 
     await waitFor(() => expect(screen.getByText('Bob Smith')).toBeInTheDocument());
     expect(screen.getByText('bob@example.com')).toBeInTheDocument();
+  });
+
+  it('matches suggestions by email when email is present', async () => {
+    const user = userEvent.setup();
+    renderModal();
+    await waitFor(() => expect(userService.getUsers).toHaveBeenCalled());
+
+    await user.type(screen.getByPlaceholderText(/search by name/i), 'carol@');
+
+    await waitFor(() => expect(screen.getByText('Carol Jones')).toBeInTheDocument());
+    expect(screen.queryByText('Bob Smith')).not.toBeInTheDocument();
+  });
+
+  it('shows suggestions without an email line when users have no email', async () => {
+    const user = userEvent.setup();
+    renderModal(true, MOCK_USERS_WITHOUT_EMAIL);
+    await waitFor(() => expect(userService.getUsers).toHaveBeenCalled());
+
+    await user.type(screen.getByPlaceholderText(/search by name/i), 'bob');
+
+    await waitFor(() => expect(screen.getByText('Bob Smith')).toBeInTheDocument());
+    expect(screen.queryByText(/@example\.com/)).not.toBeInTheDocument();
+  });
+
+  it('shows no suggestions for a query matching no user when users have no email', async () => {
+    const user = userEvent.setup();
+    renderModal(true, MOCK_USERS_WITHOUT_EMAIL);
+    await waitFor(() => expect(userService.getUsers).toHaveBeenCalled());
+
+    await user.type(screen.getByPlaceholderText(/search by name/i), 'zzz');
+
+    await waitFor(() => expect(screen.queryByText('Bob Smith')).not.toBeInTheDocument());
+    expect(screen.queryByText('Carol Jones')).not.toBeInTheDocument();
   });
 
   it('calls createMessage with correct payload on submit', async () => {

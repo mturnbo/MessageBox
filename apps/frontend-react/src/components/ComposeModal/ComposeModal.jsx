@@ -59,7 +59,7 @@ const ComposeModal = ({ visible, onHide, replyTo = null }) => {
         (u) =>
           u.username.toLowerCase().includes(q) ||
           u.displayName.toLowerCase().includes(q) ||
-          u.email.toLowerCase().includes(q),
+          (u.email ?? '').toLowerCase().includes(q),
       ),
     );
   };
@@ -119,7 +119,7 @@ const ComposeModal = ({ visible, onHide, replyTo = null }) => {
       </div>
       <div className="min-w-0">
         <p className="text-sm font-medium text-gray-800">{u.displayName}</p>
-        <p className="text-xs text-gray-500 truncate">{u.email}</p>
+        {u.email && <p className="text-xs text-gray-500 truncate">{u.email}</p>}
       </div>
     </div>
   );
