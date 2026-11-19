@@ -1,0 +1,40 @@
+name: frontend-react
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/frontend-react/**"
+      - ".github/workflows/frontend-react.yml"
+  pull_request:
+    paths:
+      - "apps/frontend-react/**"
+      - ".github/workflows/frontend-react.yml"
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: apps/frontend-react
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/frontend-react/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: npm audit --audit-level=high --omit=dev

@@ -286,6 +286,7 @@ describe('UserController', () => {
       const mockCreatedUser = { id: 1, ...mockUserData };
 
       req.body = mockUserData;
+      sandbox.stub(UserService, 'isEmailOrUsernameTaken').resolves(false);
       sandbox.stub(User, 'create').resolves(mockCreatedUser);
 
       await UserController.createUser(req, res);
