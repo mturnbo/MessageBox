@@ -796,6 +796,33 @@ def test_delete_user_requires_auth(client, session):
     assert resp.status_code == 401
 
 
+def test_unhandled_exception_returns_500_error_envelope(client, session, monkeypatch):
+    from app.services import message_service
+
+    make_user(session)
+
+    def boom(*args, **kwargs):
+        raise RuntimeError("database password is hunter2")
+
+    monkeypatch.setattr(message_service, "get_message_by_id", boom)
+    safe_client = TestClient(app, raise_server_exceptions=False)
+    resp = safe_client.get("/v1/messages/1", headers=auth_headers())
+    assert resp.status_code == 500
+    assert resp.json() == {"error": {"message": "Internal Server Error"}}
+    assert "hunter2" not in resp.text
+
+
+def test_unhandled_exception_of_another_type_returns_500_error_envelope(client, session, monkeypatch):
+    from app.services import message_service
+
+    make_user(session)
+    monkeypatch.setattr(message_service, "get_message_by_id", lambda *a, **k: 1 / 0)
+    safe_client = TestClient(app, raise_server_exceptions=False)
+    resp = safe_client.get("/v1/messages/1", headers=auth_headers())
+    assert resp.status_code == 500
+    assert resp.json() == {"error": {"message": "Internal Server Error"}}
+
+
 # ── GET /health ───────────────────────────────────────────────────────────────
 
 
