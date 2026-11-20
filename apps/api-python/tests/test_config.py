@@ -1,6 +1,7 @@
 import pytest
 
 from app.config import validate_env
+from app.database import engine, sql_echo_enabled
 
 ALL_REQUIRED = {
     "MYSQL_USER": "root",
@@ -71,6 +72,27 @@ def test_api_docs_enabled_outside_production(env):
     from app.main import api_docs_urls
 
     assert api_docs_urls(env) == {"docs_url": "/docs", "redoc_url": "/redoc", "openapi_url": "/openapi.json"}
+
+
+def test_sql_echo_disabled_when_unset(monkeypatch):
+    monkeypatch.delenv("SQL_ECHO", raising=False)
+    assert sql_echo_enabled() is False
+
+
+@pytest.mark.parametrize("value", ["true", "TRUE", "True", "1", " true "])
+def test_sql_echo_enabled_for_truthy_values(monkeypatch, value):
+    monkeypatch.setenv("SQL_ECHO", value)
+    assert sql_echo_enabled() is True
+
+
+@pytest.mark.parametrize("value", ["", "false", "0", "yes", "on", "2", "truthy"])
+def test_sql_echo_disabled_for_other_values(monkeypatch, value):
+    monkeypatch.setenv("SQL_ECHO", value)
+    assert sql_echo_enabled() is False
+
+
+def test_engine_echo_follows_sql_echo_setting():
+    assert engine.echo is sql_echo_enabled()
 
 
 def test_rate_limit_storage_defaults_to_memory(monkeypatch):
