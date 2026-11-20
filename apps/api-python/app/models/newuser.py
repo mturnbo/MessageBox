@@ -1,14 +1,14 @@
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, EmailStr, field_validator
 
-from app.models.validators import check_username
+from app.models.validators import Password, check_username
 
 
 class NewUser(BaseModel):
     username: str
-    password: str
+    password: Password
     first_name: str
     last_name: str
-    email: str
+    email: EmailStr
     device_address: str | None = None
 
     @field_validator("username")
