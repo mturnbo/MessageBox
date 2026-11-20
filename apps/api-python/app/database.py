@@ -13,7 +13,12 @@ MYSQL_DATABASE = os.getenv("MYSQL_DATABASE", "")
 
 DATABASE_URL = f"mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DATABASE}"
 
-engine = create_engine(DATABASE_URL, echo=True)
+
+def sql_echo_enabled():
+    return os.getenv("SQL_ECHO", "false").strip().lower() in ("true", "1")
+
+
+engine = create_engine(DATABASE_URL, echo=sql_echo_enabled())
 
 
 def get_session():
