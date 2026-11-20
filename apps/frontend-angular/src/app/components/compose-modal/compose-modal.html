@@ -22,7 +22,7 @@
 
   <form [formGroup]="form" (ngSubmit)="onSubmit()" class="mb-compose-form">
     @if (errorMessage) {
-      <p-message severity="error" class="w-full mb-3">{{ errorMessage }}</p-message>
+      <p-message severity="error" [text]="errorMessage" styleClass="w-full mb-3"></p-message>
     }
 
     <div class="mb-compose-form__field">
@@ -43,7 +43,7 @@
           optionLabel="username"
           placeholder="Search by name or username…"
           [dropdown]="true"
-          class="w-full"
+          styleClass="w-full"
           appendTo="body">
 
           <ng-template #item let-user>

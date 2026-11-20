@@ -9,11 +9,11 @@
     <p-tag
       [value]="totalRecords() + ' messages'"
       severity="secondary"
-      class="mb-inbox__count">
+      styleClass="mb-inbox__count">
     </p-tag>
   </div>
 
-  <p-card class="mb-inbox__card">
+  <p-card styleClass="mb-inbox__card">
     @if (loading()) {
       <div class="mb-inbox__skeleton">
         @for (i of [1,2,3,4,5]; track i) {
@@ -89,7 +89,7 @@
           [totalRecords]="totalRecords()"
           [first]="(page() - 1) * pageSize"
           (onPageChange)="onPageChange($event)"
-          class="mb-inbox__paginator">
+          styleClass="mb-inbox__paginator">
         </p-paginator>
       }
     }
