@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, ChangeDetectionStrategy } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { Paginator, PaginatorState } from 'primeng/paginator';
 import { Button } from 'primeng/button';
@@ -36,6 +36,7 @@ import { ComposeModalComponent } from '../compose-modal/compose-modal';
   ],
   providers: [PrimeMessageService],
   templateUrl: './inbox.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './inbox.scss',
 })
 export class InboxComponent implements OnInit, OnDestroy {

@@ -9,11 +9,11 @@
     <p-tag
       [value]="totalRecords() + ' messages'"
       severity="secondary"
-      styleClass="mb-sent__count">
+      class="mb-sent__count">
     </p-tag>
   </div>
 
-  <p-card styleClass="mb-sent__card">
+  <p-card class="mb-sent__card">
     @if (loading()) {
       <div class="mb-sent__skeleton">
         @for (i of [1,2,3,4,5]; track i) {
@@ -72,7 +72,7 @@
           [totalRecords]="totalRecords()"
           [first]="(page() - 1) * pageSize"
           (onPageChange)="onPageChange($event)"
-          styleClass="mb-sent__paginator">
+          class="mb-sent__paginator">
         </p-paginator>
       }
     }
