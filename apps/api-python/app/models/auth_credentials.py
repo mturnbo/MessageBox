@@ -1,6 +1,8 @@
 from pydantic import BaseModel
 
+from app.models.dbmodels import ShortText
+
 
 class AuthCredentials(BaseModel):
-    username: str
+    username: ShortText
     password: str

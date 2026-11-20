@@ -1,12 +1,24 @@
 # Database Models
 
 from datetime import UTC, datetime
+from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, ValidationInfo, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, StringConstraints, ValidationInfo, field_validator
 from pydantic.alias_generators import to_camel
 from sqlmodel import Field, SQLModel
 
-from app.models.validators import check_username
+from app.models.validators import Password, check_username
+
+# VARCHAR(255) columns
+MAX_STRING_LENGTH = 255
+# messages.body is a TEXT column (65,535 bytes); 10,000 characters fits even at 4 bytes per character
+MAX_BODY_LENGTH = 10_000
+# client_message_id is VARCHAR(255); leave room for any server-added prefix
+MAX_CLIENT_MESSAGE_ID_LENGTH = 200
+
+ShortText = Annotated[str, StringConstraints(max_length=MAX_STRING_LENGTH)]
+BodyText = Annotated[str, StringConstraints(max_length=MAX_BODY_LENGTH)]
+ClientMessageId = Annotated[str, StringConstraints(max_length=MAX_CLIENT_MESSAGE_ID_LENGTH)]
 
 
 def scope_client_message_id(sender_id: int, key: str) -> str:
@@ -64,12 +76,12 @@ class UserSummary(BaseModel):
 
 class UserUpdateFields(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
-    username: str | None = None
-    email: str | None = None
-    password: str | None = None
-    first_name: str | None = None
-    last_name: str | None = None
-    device_address: str | None = None
+    username: ShortText | None = None
+    email: EmailStr | None = None
+    password: Password | None = None
+    first_name: ShortText | None = None
+    last_name: ShortText | None = None
+    device_address: ShortText | None = None
 
     @field_validator("username")
     @classmethod
@@ -122,10 +134,10 @@ class CreateMessageRequest(BaseModel):
     model_config = _camel
     sender_id: int
     recipient_id: int
-    subject: str | None = None
-    body: str | None = None
-    sender_address: str | None = None
-    client_message_id: str | None = None
+    subject: ShortText | None = None
+    body: BodyText | None = None
+    sender_address: ShortText | None = None
+    client_message_id: ClientMessageId | None = None
 
 
 class ReplyToMessageRequest(BaseModel):
@@ -133,16 +145,16 @@ class ReplyToMessageRequest(BaseModel):
     reply_to_id: int
     sender_id: int
     recipient_id: int
-    subject: str | None = None
-    body: str | None = None
-    sender_address: str | None = None
-    client_message_id: str | None = None
+    subject: ShortText | None = None
+    body: BodyText | None = None
+    sender_address: ShortText | None = None
+    client_message_id: ClientMessageId | None = None
 
 
 class ReadMessageRequest(BaseModel):
     model_config = _camel
     id: int
-    reader_address: str | None = None
+    reader_address: ShortText | None = None
 
 
 class DeleteMessageRequest(BaseModel):

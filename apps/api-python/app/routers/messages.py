@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response
 from sqlmodel import Session
 
 from app.database import get_session
 from app.limiter import API_RATE_LIMIT, limiter
 from app.models.dbmodels import (
+    MAX_CLIENT_MESSAGE_ID_LENGTH,
     CreateMessageRequest,
     DeleteMessageRequest,
     MessageListResponse,
@@ -92,10 +93,10 @@ def create_message(
     response: Response,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
+    idempotency_key: str | None = Header(default=None, max_length=MAX_CLIENT_MESSAGE_ID_LENGTH),
 ):
     if current_user.id != payload.sender_id:
         raise HTTPException(status_code=403, detail="Forbidden")
-    idempotency_key = request.headers.get("idempotency-key")
     message, replayed = message_service.create_message(session, payload, idempotency_key)
     if replayed:
         response.status_code = 200
@@ -110,6 +111,7 @@ def reply_to_message(
     response: Response,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
+    idempotency_key: str | None = Header(default=None, max_length=MAX_CLIENT_MESSAGE_ID_LENGTH),
 ):
     if current_user.id != payload.sender_id:
         raise HTTPException(status_code=403, detail="Forbidden")
@@ -118,7 +120,6 @@ def reply_to_message(
         raise HTTPException(status_code=404, detail="Message not found")
     if current_user.id not in (parent.sender_id, parent.recipient_id):
         raise HTTPException(status_code=404, detail="Message not found")
-    idempotency_key = request.headers.get("idempotency-key")
     message, thread_id, reply_to, replayed = message_service.reply_to_message(session, payload, idempotency_key)
     if replayed:
         response.status_code = 200
@@ -145,6 +146,8 @@ def read_message(
         raise HTTPException(status_code=404, detail="Message not found")
     if current_user.id not in (message.sender_id, message.recipient_id):
         raise HTTPException(status_code=404, detail="Message not found")
+    if current_user.id != message.recipient_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
     message_service.read_message(session, payload.id, payload.reader_address)
     return {"status": "Message read successfully"}
 
