@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
+import { Component, EventEmitter, Input, Output, inject, ChangeDetectionStrategy } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Dialog } from 'primeng/dialog';
 import { InputText } from 'primeng/inputtext';
@@ -13,6 +13,7 @@ import { AuthService } from '../../core/services/auth.service';
   selector: 'app-login-modal',
   imports: [Dialog, ReactiveFormsModule, InputText, Password, Button, Message, FloatLabel],
   templateUrl: './login-modal.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './login-modal.scss',
 })
 export class LoginModalComponent {

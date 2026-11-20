@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject } from '@angular/core';
+import { Component, computed, effect, inject, ChangeDetectionStrategy } from '@angular/core';
 import { Router, RouterOutlet } from '@angular/router';
 import { Toast } from 'primeng/toast';
 import { MessageService as PrimeMessageService } from 'primeng/api';
@@ -13,6 +13,7 @@ import { NotificationService } from './core/services/notification.service';
   imports: [RouterOutlet, Toast, HeaderComponent, LoginModalComponent],
   providers: [PrimeMessageService],
   templateUrl: './app.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './app.scss',
 })
 export class App {
