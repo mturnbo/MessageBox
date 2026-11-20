@@ -1,3 +1,4 @@
+import bcrypt
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, create_engine, select
@@ -7,6 +8,7 @@ from app.database import get_session
 from app.limiter import limiter
 from app.main import app
 from app.models.dbmodels import Message, User
+from app.routers import auth as auth_router
 from app.utilites.password import (
     create_access_token,
     create_refresh_token,
@@ -90,6 +92,86 @@ def test_auth_unknown_user(client, session):
     assert resp.status_code == 401
 
 
+def spy_compare_password(monkeypatch):
+    calls = []
+    original_compare_password = auth_router.compare_password
+
+    def spy(password, hashed_password):
+        calls.append((password, hashed_password))
+        return original_compare_password(password, hashed_password)
+
+    monkeypatch.setattr(auth_router, "compare_password", spy)
+    return calls
+
+
+def test_auth_unknown_user_same_response_as_wrong_password(client, session):
+    make_user(session)
+    wrong_password = client.post("/v1/auth", json={"username": "alice", "password": "wrong"})
+    unknown_user = client.post("/v1/auth", json={"username": "ghost", "password": "wrong"})
+    assert unknown_user.status_code == wrong_password.status_code == 401
+    assert unknown_user.json() == wrong_password.json()
+
+
+def test_auth_unknown_user_runs_bcrypt_against_dummy_hash(client, session, monkeypatch):
+    calls = spy_compare_password(monkeypatch)
+    resp = client.post("/v1/auth", json={"username": "ghost", "password": "x"})
+    assert resp.status_code == 401
+    assert calls == [("x", auth_router.DUMMY_PASSWORD_HASH)]
+
+
+def test_auth_unknown_email_runs_bcrypt_against_dummy_hash(client, session, monkeypatch):
+    make_user(session)
+    calls = spy_compare_password(monkeypatch)
+    resp = client.post("/v1/auth", json={"username": "ghost@example.com", "password": "x"})
+    assert resp.status_code == 401
+    assert calls == [("x", auth_router.DUMMY_PASSWORD_HASH)]
+
+
+def test_auth_unknown_user_with_empty_password_runs_bcrypt(client, session, monkeypatch):
+    calls = spy_compare_password(monkeypatch)
+    resp = client.post("/v1/auth", json={"username": "", "password": ""})
+    assert resp.status_code == 401
+    assert calls == [("", auth_router.DUMMY_PASSWORD_HASH)]
+
+
+def test_auth_existing_user_compares_against_real_hash_only(client, session, monkeypatch):
+    user = make_user(session)
+    calls = spy_compare_password(monkeypatch)
+    resp = client.post("/v1/auth", json={"username": "alice", "password": "wrong"})
+    assert resp.status_code == 401
+    assert calls == [("wrong", user.password_hash)]
+
+
+def test_auth_dummy_password_never_authenticates(client, session):
+    resp = client.post("/v1/auth", json={"username": "ghost", "password": "dummy-password-for-timing-equalization"})
+    assert resp.status_code == 401
+
+
+def bcrypt_cost(password_hash):
+    return int(password_hash.split("$")[2])
+
+
+def test_dummy_hash_uses_same_bcrypt_cost_as_real_hashes():
+    real_hash = generate_hashed_password("secret")
+    assert bcrypt_cost(auth_router.DUMMY_PASSWORD_HASH) == bcrypt_cost(real_hash)
+
+
+def test_dummy_hash_uses_same_bcrypt_cost_as_node_api_hashes():
+    node_hash = bcrypt.hashpw(b"secret", bcrypt.gensalt(rounds=12)).decode("utf-8")
+    assert bcrypt_cost(auth_router.DUMMY_PASSWORD_HASH) == bcrypt_cost(node_hash) == 12
+
+
+def test_auth_with_node_api_style_hash(client, session):
+    node_hash = bcrypt.hashpw(b"secret", bcrypt.gensalt(rounds=12)).decode("utf-8")
+    make_user(session)
+    user = session.exec(select(User).where(User.username == "alice")).one()
+    user.password_hash = node_hash
+    session.add(user)
+    session.commit()
+    assert client.post("/v1/auth", json={"username": "alice", "password": "secret"}).status_code == 200
+    assert client.post("/v1/auth", json={"username": "alice", "password": "wrong"}).status_code == 401
+
+
 def test_auth_password_over_72_bytes_returns_401(client, session):
     make_user(session)
     resp = client.post("/v1/auth", json={"username": "alice", "password": "a" * 73})
@@ -104,6 +186,11 @@ def test_auth_multibyte_password_over_72_bytes_returns_401(client, session):
 
 def test_auth_password_over_72_bytes_unknown_user_returns_401(client, session):
     resp = client.post("/v1/auth", json={"username": "ghost", "password": "a" * 1000})
+    assert resp.status_code == 401
+
+
+def test_auth_multibyte_password_over_72_bytes_unknown_user_returns_401(client, session):
+    resp = client.post("/v1/auth", json={"username": "ghost", "password": "é" * 37})
     assert resp.status_code == 401
 
 

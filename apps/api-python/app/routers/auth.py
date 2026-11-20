@@ -8,10 +8,18 @@ from app.limiter import AUTH_RATE_LIMIT, limiter
 from app.models.auth_credentials import AuthCredentials
 from app.models.dbmodels import User
 from app.models.token import Token
-from app.utilites.password import compare_password, create_access_token, create_refresh_token, token_claims
+from app.utilites.password import (
+    compare_password,
+    create_access_token,
+    create_refresh_token,
+    generate_hashed_password,
+    token_claims,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 security = HTTPBearer()
+
+DUMMY_PASSWORD_HASH = generate_hashed_password("dummy-password-for-timing-equalization")
 
 
 @router.post("", response_model=Token)
@@ -20,7 +28,10 @@ def authenticate_user(request: Request, auth_cred: AuthCredentials, session: Ses
     user = session.exec(
         select(User).where(or_(User.username == auth_cred.username, User.email == auth_cred.username))
     ).first()
-    if user and compare_password(auth_cred.password, user.password_hash):
+    if not user:
+        compare_password(auth_cred.password, DUMMY_PASSWORD_HASH)
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    if compare_password(auth_cred.password, user.password_hash):
         token_str = create_access_token(data=token_claims(user))
         refresh_token_str = create_refresh_token(data=token_claims(user))
         return Token(username=user.username, token=token_str, refreshToken=refresh_token_str)
