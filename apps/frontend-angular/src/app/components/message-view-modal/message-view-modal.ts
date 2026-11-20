@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output, ChangeDetectionStrategy } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { Dialog } from 'primeng/dialog';
 import { Button } from 'primeng/button';
@@ -11,7 +11,6 @@ import { Message } from '../../models/message.model';
   selector: 'app-message-view-modal',
   imports: [Dialog, Button, Tag, Divider, DatePipe],
   templateUrl: './message-view-modal.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './message-view-modal.scss',
 })
 export class MessageViewModalComponent {

@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges, ChangeDetectionStrategy } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Dialog } from 'primeng/dialog';
 import { InputText } from 'primeng/inputtext';
@@ -29,7 +29,6 @@ import { User } from '../../models/user.model';
   ],
   providers: [PrimeMessageService],
   templateUrl: './compose-modal.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './compose-modal.scss',
 })
 export class ComposeModalComponent implements OnInit, OnChanges {
