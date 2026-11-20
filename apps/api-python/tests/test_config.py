@@ -1,12 +1,13 @@
 import pytest
 
 from app.config import validate_env
+from app.database import engine, sql_echo_enabled
 
 ALL_REQUIRED = {
     "MYSQL_USER": "root",
     "MYSQL_PASSWORD": "secret",
     "MYSQL_DATABASE": "testdb",
-    "JWT_SECRET": "supersecret",
+    "JWT_SECRET": "s" * 32,
 }
 
 
@@ -36,6 +37,62 @@ def test_validate_env_exits_when_multiple_vars_missing(monkeypatch, capsys):
     stderr = capsys.readouterr().err
     assert "MYSQL_USER" in stderr
     assert "JWT_SECRET" in stderr
+
+
+def test_validate_env_exits_when_jwt_secret_too_short(monkeypatch, capsys):
+    for var, val in ALL_REQUIRED.items():
+        monkeypatch.setenv(var, val)
+    monkeypatch.setenv("JWT_SECRET", "s" * 31)
+    with pytest.raises(SystemExit) as exc:
+        validate_env()
+    assert exc.value.code == 1
+    assert "JWT_SECRET must be at least 32 characters" in capsys.readouterr().err
+
+
+def test_validate_env_accepts_jwt_secret_of_minimum_length(monkeypatch):
+    for var, val in ALL_REQUIRED.items():
+        monkeypatch.setenv(var, val)
+    monkeypatch.setenv("JWT_SECRET", "s" * 32)
+    validate_env()
+
+
+@pytest.mark.parametrize("path", ["/docs", "/redoc", "/openapi.json"])
+def test_api_docs_disabled_in_production(path):
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    from app.main import api_docs_urls
+
+    resp = TestClient(FastAPI(**api_docs_urls("production"))).get(path)
+    assert resp.status_code == 404
+
+
+@pytest.mark.parametrize("env", ["development", "test"])
+def test_api_docs_enabled_outside_production(env):
+    from app.main import api_docs_urls
+
+    assert api_docs_urls(env) == {"docs_url": "/docs", "redoc_url": "/redoc", "openapi_url": "/openapi.json"}
+
+
+def test_sql_echo_disabled_when_unset(monkeypatch):
+    monkeypatch.delenv("SQL_ECHO", raising=False)
+    assert sql_echo_enabled() is False
+
+
+@pytest.mark.parametrize("value", ["true", "TRUE", "True", "1", " true "])
+def test_sql_echo_enabled_for_truthy_values(monkeypatch, value):
+    monkeypatch.setenv("SQL_ECHO", value)
+    assert sql_echo_enabled() is True
+
+
+@pytest.mark.parametrize("value", ["", "false", "0", "yes", "on", "2", "truthy"])
+def test_sql_echo_disabled_for_other_values(monkeypatch, value):
+    monkeypatch.setenv("SQL_ECHO", value)
+    assert sql_echo_enabled() is False
+
+
+def test_engine_echo_follows_sql_echo_setting():
+    assert engine.echo is sql_echo_enabled()
 
 
 def test_rate_limit_storage_defaults_to_memory(monkeypatch):

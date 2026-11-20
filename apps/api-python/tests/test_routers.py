@@ -1,3 +1,4 @@
+import bcrypt
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, create_engine, select
@@ -7,6 +8,7 @@ from app.database import get_session
 from app.limiter import limiter
 from app.main import app
 from app.models.dbmodels import Message, User
+from app.routers import auth as auth_router
 from app.utilites.password import (
     create_access_token,
     create_refresh_token,
@@ -90,6 +92,86 @@ def test_auth_unknown_user(client, session):
     assert resp.status_code == 401
 
 
+def spy_compare_password(monkeypatch):
+    calls = []
+    original_compare_password = auth_router.compare_password
+
+    def spy(password, hashed_password):
+        calls.append((password, hashed_password))
+        return original_compare_password(password, hashed_password)
+
+    monkeypatch.setattr(auth_router, "compare_password", spy)
+    return calls
+
+
+def test_auth_unknown_user_same_response_as_wrong_password(client, session):
+    make_user(session)
+    wrong_password = client.post("/v1/auth", json={"username": "alice", "password": "wrong"})
+    unknown_user = client.post("/v1/auth", json={"username": "ghost", "password": "wrong"})
+    assert unknown_user.status_code == wrong_password.status_code == 401
+    assert unknown_user.json() == wrong_password.json()
+
+
+def test_auth_unknown_user_runs_bcrypt_against_dummy_hash(client, session, monkeypatch):
+    calls = spy_compare_password(monkeypatch)
+    resp = client.post("/v1/auth", json={"username": "ghost", "password": "x"})
+    assert resp.status_code == 401
+    assert calls == [("x", auth_router.DUMMY_PASSWORD_HASH)]
+
+
+def test_auth_unknown_email_runs_bcrypt_against_dummy_hash(client, session, monkeypatch):
+    make_user(session)
+    calls = spy_compare_password(monkeypatch)
+    resp = client.post("/v1/auth", json={"username": "ghost@example.com", "password": "x"})
+    assert resp.status_code == 401
+    assert calls == [("x", auth_router.DUMMY_PASSWORD_HASH)]
+
+
+def test_auth_unknown_user_with_empty_password_runs_bcrypt(client, session, monkeypatch):
+    calls = spy_compare_password(monkeypatch)
+    resp = client.post("/v1/auth", json={"username": "", "password": ""})
+    assert resp.status_code == 401
+    assert calls == [("", auth_router.DUMMY_PASSWORD_HASH)]
+
+
+def test_auth_existing_user_compares_against_real_hash_only(client, session, monkeypatch):
+    user = make_user(session)
+    calls = spy_compare_password(monkeypatch)
+    resp = client.post("/v1/auth", json={"username": "alice", "password": "wrong"})
+    assert resp.status_code == 401
+    assert calls == [("wrong", user.password_hash)]
+
+
+def test_auth_dummy_password_never_authenticates(client, session):
+    resp = client.post("/v1/auth", json={"username": "ghost", "password": "dummy-password-for-timing-equalization"})
+    assert resp.status_code == 401
+
+
+def bcrypt_cost(password_hash):
+    return int(password_hash.split("$")[2])
+
+
+def test_dummy_hash_uses_same_bcrypt_cost_as_real_hashes():
+    real_hash = generate_hashed_password("secret")
+    assert bcrypt_cost(auth_router.DUMMY_PASSWORD_HASH) == bcrypt_cost(real_hash)
+
+
+def test_dummy_hash_uses_same_bcrypt_cost_as_node_api_hashes():
+    node_hash = bcrypt.hashpw(b"secret", bcrypt.gensalt(rounds=12)).decode("utf-8")
+    assert bcrypt_cost(auth_router.DUMMY_PASSWORD_HASH) == bcrypt_cost(node_hash) == 12
+
+
+def test_auth_with_node_api_style_hash(client, session):
+    node_hash = bcrypt.hashpw(b"secret", bcrypt.gensalt(rounds=12)).decode("utf-8")
+    make_user(session)
+    user = session.exec(select(User).where(User.username == "alice")).one()
+    user.password_hash = node_hash
+    session.add(user)
+    session.commit()
+    assert client.post("/v1/auth", json={"username": "alice", "password": "secret"}).status_code == 200
+    assert client.post("/v1/auth", json={"username": "alice", "password": "wrong"}).status_code == 401
+
+
 def test_auth_password_over_72_bytes_returns_401(client, session):
     make_user(session)
     resp = client.post("/v1/auth", json={"username": "alice", "password": "a" * 73})
@@ -104,6 +186,11 @@ def test_auth_multibyte_password_over_72_bytes_returns_401(client, session):
 
 def test_auth_password_over_72_bytes_unknown_user_returns_401(client, session):
     resp = client.post("/v1/auth", json={"username": "ghost", "password": "a" * 1000})
+    assert resp.status_code == 401
+
+
+def test_auth_multibyte_password_over_72_bytes_unknown_user_returns_401(client, session):
+    resp = client.post("/v1/auth", json={"username": "ghost", "password": "é" * 37})
     assert resp.status_code == 401
 
 
@@ -178,6 +265,65 @@ def test_auth_token_subject_is_user_id(client, session):
     login = client.post("/v1/auth", json={"username": "alice", "password": "secret"})
     assert decode_token(login.json()["token"])["sub"] == str(user.id)
     assert decode_token(login.json()["refreshToken"])["sub"] == str(user.id)
+
+
+def _signed_token(user, **overrides):
+    from datetime import UTC, datetime, timedelta
+
+    import jwt
+
+    from app.config import JWT_AUDIENCE, JWT_ISSUER, JWT_SECRET
+
+    claims = {
+        **token_claims(user),
+        "exp": datetime.now(UTC) + timedelta(minutes=5),
+        "iss": JWT_ISSUER,
+        "aud": JWT_AUDIENCE,
+        **overrides,
+    }
+    claims = {k: v for k, v in claims.items() if v is not None}
+    return jwt.encode(claims, JWT_SECRET, algorithm="HS256")
+
+
+def test_issued_tokens_include_issuer_and_audience(client, session):
+    from app.config import JWT_AUDIENCE, JWT_ISSUER
+
+    make_user(session)
+    login = client.post("/v1/auth", json={"username": "alice", "password": "secret"}).json()
+    for token in (login["token"], login["refreshToken"]):
+        payload = decode_token(token)
+        assert payload["iss"] == JWT_ISSUER
+        assert payload["aud"] == JWT_AUDIENCE
+
+
+def test_token_with_matching_issuer_and_audience_accepted(client, session):
+    user = make_user(session)
+    resp = client.get("/v1/users/", headers={"Authorization": f"Bearer {_signed_token(user)}"})
+    assert resp.status_code == 200
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"iss": None},
+        {"aud": None},
+        {"iss": "some-other-service"},
+        {"aud": "some-other-audience"},
+    ],
+)
+def test_token_with_missing_or_wrong_issuer_or_audience_rejected(client, session, overrides):
+    user = make_user(session)
+    token = _signed_token(user, **overrides)
+    resp = client.get("/v1/users/", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 401
+    assert decode_token(token) is None
+
+
+def test_refresh_token_with_wrong_audience_rejected(client, session):
+    user = make_user(session)
+    token = _signed_token(user, type="refresh", aud="some-other-audience")
+    resp = client.post("/v1/auth/refresh", json={"refreshToken": token})
+    assert resp.status_code == 401
 
 
 def test_legacy_username_subject_token_rejected(client, session):
@@ -458,7 +604,7 @@ def test_register_new_user(client, session):
         headers=auth_headers(),
         json={
             "username": "newuser",
-            "password": "pw123",
+            "password": "password123",
             "first_name": "New",
             "last_name": "User",
             "email": "new@example.com",
@@ -475,7 +621,7 @@ def test_register_duplicate_username(client, session):
         headers=auth_headers(),
         json={
             "username": "alice",
-            "password": "pw",
+            "password": "password123",
             "first_name": "A",
             "last_name": "B",
             "email": "other@example.com",
@@ -491,7 +637,7 @@ def test_register_duplicate_email(client, session):
         headers=auth_headers(),
         json={
             "username": "other",
-            "password": "pw",
+            "password": "password123",
             "first_name": "A",
             "last_name": "B",
             "email": "alice@example.com",
@@ -505,13 +651,93 @@ def test_register_requires_auth(client):
         "/v1/users/register",
         json={
             "username": "u",
-            "password": "p",
+            "password": "password123",
             "first_name": "F",
             "last_name": "L",
             "email": "u@example.com",
         },
     )
     assert resp.status_code == 401
+
+
+def register_payload(**overrides):
+    payload = {
+        "username": "newuser",
+        "password": "password123",
+        "first_name": "New",
+        "last_name": "User",
+        "email": "new@example.com",
+    }
+    payload.update(overrides)
+    return payload
+
+
+def test_register_stores_valid_email(client, session):
+    make_user(session)
+    resp = client.post("/v1/users/register", headers=auth_headers(), json=register_payload())
+    assert resp.status_code == 201
+    assert resp.json()["email"] == "new@example.com"
+
+
+@pytest.mark.parametrize("email", ["not-an-email", "missing-at.example.com", "user@", "@example.com", ""])
+def test_register_invalid_email_rejected(client, session, email):
+    make_user(session)
+    resp = client.post("/v1/users/register", headers=auth_headers(), json=register_payload(email=email))
+    assert resp.status_code == 422
+    assert session.exec(select(User).where(User.username == "newuser")).first() is None
+
+
+@pytest.mark.parametrize("password", ["", "1234567"])
+def test_register_short_password_rejected(client, session, password):
+    make_user(session)
+    resp = client.post("/v1/users/register", headers=auth_headers(), json=register_payload(password=password))
+    assert resp.status_code == 422
+
+
+def test_register_password_min_length_accepted(client, session):
+    make_user(session)
+    resp = client.post("/v1/users/register", headers=auth_headers(), json=register_payload(password="12345678"))
+    assert resp.status_code == 201
+
+
+def test_register_password_72_bytes_accepted(client, session):
+    make_user(session)
+    resp = client.post("/v1/users/register", headers=auth_headers(), json=register_payload(password="a" * 72))
+    assert resp.status_code == 201
+
+
+def test_register_password_73_bytes_rejected(client, session):
+    make_user(session)
+    resp = client.post("/v1/users/register", headers=auth_headers(), json=register_payload(password="a" * 73))
+    assert resp.status_code == 422
+
+
+def test_register_multibyte_password_72_bytes_accepted(client, session):
+    make_user(session)
+    password = "é" * 36
+    assert len(password.encode("utf-8")) == 72
+    resp = client.post("/v1/users/register", headers=auth_headers(), json=register_payload(password=password))
+    assert resp.status_code == 201
+
+
+def test_register_multibyte_password_over_72_bytes_rejected(client, session):
+    make_user(session)
+    password = "é" * 36 + "a"
+    assert len(password) == 37
+    assert len(password.encode("utf-8")) == 73
+    resp = client.post("/v1/users/register", headers=auth_headers(), json=register_payload(password=password))
+    assert resp.status_code == 422
+
+
+def test_register_rate_limit_uses_auth_limit(client, session):
+    make_user(session)
+    headers = auth_headers()
+    limit = int(__import__("os").getenv("AUTH_RATE_LIMIT_MAX", "10"))
+    for i in range(limit):
+        resp = client.post("/v1/users/register", headers=headers, json=register_payload())
+        assert resp.status_code != 429, f"request {i + 1} blocked too early"
+    resp = client.post("/v1/users/register", headers=headers, json=register_payload())
+    assert resp.status_code == 429
 
 
 @pytest.mark.parametrize("username", ["12345", "0", "+5", " 7 ", "bob@example.com", "@", "a@b"])
@@ -696,6 +922,54 @@ def test_update_user_requires_auth(client, session):
     user = make_user(session)
     resp = client.post("/v1/users/update", json={"id": user.id, "userUpdate": {}})
     assert resp.status_code == 401
+
+
+def test_update_user_invalid_email_rejected(client, session):
+    user = make_user(session)
+    resp = client.post(
+        "/v1/users/update",
+        headers=auth_headers(),
+        json={"id": user.id, "userUpdate": {"email": "not-an-email"}},
+    )
+    assert resp.status_code == 422
+    session.refresh(user)
+    assert user.email == "alice@example.com"
+
+
+def test_update_user_valid_email_accepted(client, session):
+    user = make_user(session)
+    resp = client.post(
+        "/v1/users/update",
+        headers=auth_headers(),
+        json={"id": user.id, "userUpdate": {"email": "alice2@example.com"}},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["email"] == "alice2@example.com"
+
+
+@pytest.mark.parametrize("password", ["", "1234567", "a" * 73, "é" * 36 + "a"])
+def test_update_user_invalid_password_rejected(client, session, password):
+    user = make_user(session)
+    old_hash = user.password_hash
+    resp = client.post(
+        "/v1/users/update",
+        headers=auth_headers(),
+        json={"id": user.id, "userUpdate": {"password": password}},
+    )
+    assert resp.status_code == 422
+    session.refresh(user)
+    assert user.password_hash == old_hash
+
+
+@pytest.mark.parametrize("password", ["12345678", "a" * 72, "é" * 36])
+def test_update_user_boundary_password_accepted(client, session, password):
+    user = make_user(session)
+    resp = client.post(
+        "/v1/users/update",
+        headers=auth_headers(),
+        json={"id": user.id, "userUpdate": {"password": password}},
+    )
+    assert resp.status_code == 200
 
 
 def test_update_username(client, session):
@@ -1205,16 +1479,47 @@ def test_get_thread_not_found_for_non_party(client, session, two_users):
 # ── POST /messages/read ───────────────────────────────────────────────────────
 
 
-def test_read_message(client, session, two_users):
+def test_read_message_by_recipient(client, session, two_users):
     alice, bob = two_users
     msg = make_message(session, alice.id, bob.id)
     resp = client.post(
         "/v1/messages/read",
-        headers=auth_headers(),
+        headers=auth_headers("bob"),
         json={"id": msg.id, "reader_address": "1.2.3.4"},
     )
     assert resp.status_code == 200
     assert resp.json()["status"] == "Message read successfully"
+    session.refresh(msg)
+    assert msg.read_at is not None
+    assert msg.reader_address == "1.2.3.4"
+
+
+def test_read_message_forbidden_for_sender(client, session, two_users):
+    alice, bob = two_users
+    msg = make_message(session, alice.id, bob.id)
+    resp = client.post(
+        "/v1/messages/read",
+        headers=auth_headers("alice"),
+        json={"id": msg.id, "reader_address": "1.2.3.4"},
+    )
+    assert resp.status_code == 403
+    assert resp.json()["error"]["message"] == "Forbidden"
+    session.refresh(msg)
+    assert msg.read_at is None
+    assert msg.reader_address is None
+
+
+def test_read_message_self_addressed(client, session, two_users):
+    alice, _ = two_users
+    msg = make_message(session, alice.id, alice.id)
+    resp = client.post(
+        "/v1/messages/read",
+        headers=auth_headers("alice"),
+        json={"id": msg.id, "reader_address": "1.2.3.4"},
+    )
+    assert resp.status_code == 200
+    session.refresh(msg)
+    assert msg.read_at is not None
 
 
 def test_read_message_not_found(client, session):
@@ -1245,6 +1550,8 @@ def test_read_message_not_found_for_non_party(client, session, two_users):
     )
     assert resp.status_code == 404
     assert resp.json() == {"error": {"message": "Message not found"}}
+    session.refresh(msg)
+    assert msg.read_at is None
 
 
 # ── POST /messages/delete ─────────────────────────────────────────────────────

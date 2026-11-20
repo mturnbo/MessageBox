@@ -146,6 +146,8 @@ def read_message(
         raise HTTPException(status_code=404, detail="Message not found")
     if current_user.id not in (message.sender_id, message.recipient_id):
         raise HTTPException(status_code=404, detail="Message not found")
+    if current_user.id != message.recipient_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
     message_service.read_message(session, payload.id, payload.reader_address)
     return {"status": "Message read successfully"}
 

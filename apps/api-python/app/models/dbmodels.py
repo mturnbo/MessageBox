@@ -3,11 +3,11 @@
 from datetime import UTC, datetime
 from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, StringConstraints, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, StringConstraints, field_validator
 from pydantic.alias_generators import to_camel
 from sqlmodel import Field, SQLModel
 
-from app.models.validators import check_username
+from app.models.validators import Password, check_username
 
 # VARCHAR(255) columns
 MAX_STRING_LENGTH = 255
@@ -66,8 +66,8 @@ class UserSummary(BaseModel):
 class UserUpdateFields(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
     username: ShortText | None = None
-    email: ShortText | None = None
-    password: str | None = None
+    email: EmailStr | None = None
+    password: Password | None = None
     first_name: ShortText | None = None
     last_name: ShortText | None = None
     device_address: ShortText | None = None

@@ -13,6 +13,9 @@ _REQUIRED = [
 ]
 
 JWT_SECRET = os.getenv("JWT_SECRET")
+MIN_SIGNING_KEY_LENGTH = 32
+JWT_ISSUER = os.getenv("JWT_ISSUER", "messagebox-api-python")
+JWT_AUDIENCE = os.getenv("JWT_AUDIENCE", "messagebox")
 
 
 def validate_env():
@@ -20,4 +23,11 @@ def validate_env():
     if missing:
         for var, desc in missing:
             print(f"[CONFIG] Missing required env var: {var} ({desc})", file=sys.stderr, flush=True)
+        sys.exit(1)
+    if len(os.getenv("JWT_SECRET")) < MIN_SIGNING_KEY_LENGTH:
+        print(
+            f"[CONFIG] JWT_SECRET must be at least {MIN_SIGNING_KEY_LENGTH} characters",
+            file=sys.stderr,
+            flush=True,
+        )
         sys.exit(1)
