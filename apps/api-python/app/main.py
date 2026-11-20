@@ -33,7 +33,14 @@ origin_port = os.getenv("ORIGIN", "")
 if origin_port:
     origins.append(f"http://localhost:{origin_port}")
 
-app = FastAPI(title="MessageBox API")
+
+def api_docs_urls(env: str) -> dict:
+    if env == "production":
+        return {"docs_url": None, "redoc_url": None, "openapi_url": None}
+    return {"docs_url": "/docs", "redoc_url": "/redoc", "openapi_url": "/openapi.json"}
+
+
+app = FastAPI(title="MessageBox API", **api_docs_urls(os.getenv("ENV", "development")))
 
 
 @app.exception_handler(StarletteHTTPException)
