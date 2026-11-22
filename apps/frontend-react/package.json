@@ -26,7 +26,7 @@
     "@tailwindcss/vite": "^4.3.5",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.3",
-    "@testing-library/user-event": "^14.6.1",
+    "@testing-library/user-event": "^14.6.13",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^5.0.4",
@@ -48,9 +48,9 @@
   },
   "dependencies": {
     "primeicons": "^8.0.2",
-    "primereact": "^10.9.8",
+    "primereact": "^10.9.9",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
-    "react-router-dom": "^7.18.5"
+    "react-router-dom": "^7.18.6"
   }
 }
