@@ -39,6 +39,14 @@ updates:
         update-types: [version-update:semver-major]
       - dependency-name: "@angular/*"
         update-types: [version-update:semver-major]
+      # @primeuix/themes 3+ is under the PrimeUI License (license key required)
+      - dependency-name: "@primeuix/themes"
+        update-types: [version-update:semver-major]
+      # @angular/build 21 requires typescript >=5.9 <6.0 and vitest ^4
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
+      - dependency-name: vitest
+        update-types: [version-update:semver-major]
     groups:
       minor-and-patch:
         update-types: [minor, patch]
