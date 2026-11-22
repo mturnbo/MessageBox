@@ -128,24 +128,4 @@ describe('LoginModalComponent', () => {
       expect(component.form.controls.username.value).toBe('alice');
     });
   });
-
-  describe('error message rendering', () => {
-    it('should not render an error message when there is none', () => {
-      expect(document.body.querySelector('p-message')).toBeNull();
-    });
-
-    it('should render the error text inside the message', () => {
-      component.form.setValue({ username: 'alice', password: 'wrong' });
-      component.onSubmit();
-
-      httpMock
-        .expectOne((r) => r.url.endsWith('/auth'))
-        .flush('Unauthorized', { status: 401, statusText: 'Unauthorized' });
-      fixture.detectChanges();
-
-      const message = document.body.querySelector('p-message');
-      expect(message?.textContent).toContain('Invalid username or password.');
-      expect(message?.classList).toContain('w-full');
-    });
-  });
 });

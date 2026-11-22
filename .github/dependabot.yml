@@ -21,6 +21,10 @@ updates:
     directory: /apps/frontend-react
     schedule:
       interval: weekly
+    ignore:
+      # primereact 11+ is under the PrimeUI License (license key required)
+      - dependency-name: primereact
+        update-types: [version-update:semver-major]
     groups:
       minor-and-patch:
         update-types: [minor, patch]
@@ -29,6 +33,12 @@ updates:
     directory: /apps/frontend-angular
     schedule:
       interval: weekly
+    ignore:
+      # primeng 22+ is under the PrimeUI License (license key required) and pins Angular majors
+      - dependency-name: primeng
+        update-types: [version-update:semver-major]
+      - dependency-name: "@angular/*"
+        update-types: [version-update:semver-major]
     groups:
       minor-and-patch:
         update-types: [minor, patch]

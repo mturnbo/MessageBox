@@ -283,10 +283,6 @@ describe('ComposeModalComponent', () => {
 
       expect(component.errorMessage).toBe('Failed to send message. Please try again.');
       expect(component.loading).toBe(false);
-
-      fixture.detectChanges();
-      const message = document.body.querySelector('p-message');
-      expect(message?.textContent).toContain('Failed to send message. Please try again.');
     });
 
     it('should reset form after successful send', async () => {

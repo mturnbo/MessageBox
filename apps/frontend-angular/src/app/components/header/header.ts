@@ -1,4 +1,4 @@
-import { Component, computed, ChangeDetectionStrategy } from '@angular/core';
+import { Component, computed } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { Toolbar } from 'primeng/toolbar';
 import { Button } from 'primeng/button';
@@ -14,7 +14,6 @@ import { ComposeModalComponent } from '../compose-modal/compose-modal';
   selector: 'app-header',
   imports: [Toolbar, Button, Avatar, Menu, RouterLink, RouterLinkActive, ComposeModalComponent],
   templateUrl: './header.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './header.scss',
 })
 export class HeaderComponent {
