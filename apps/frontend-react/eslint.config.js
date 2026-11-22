@@ -8,11 +8,8 @@ export default defineConfig([
   globalIgnores(['dist']),
   {
     files: ['**/*.{js,jsx}'],
-    extends: [
-      js.configs.recommended,
-      reactHooks.configs['recommended-latest'],
-      reactRefresh.configs.vite,
-    ],
+    extends: [js.configs.recommended, reactRefresh.configs.vite],
+    plugins: { 'react-hooks': reactHooks },
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,
@@ -23,6 +20,9 @@ export default defineConfig([
       },
     },
     rules: {
+      // Classic hooks rules only; v7's React Compiler rules are not enabled (no React Compiler in use)
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
     },
   },
