@@ -8,6 +8,11 @@ class User extends Model {
   checkPassword(password) {
     return bcrypt.compare(password, this.passwordHash);
   }
+
+  toJSON() {
+    const { passwordHash, password, ...safeUser } = this.get();
+    return safeUser;
+  }
 };
 
 User.init(
