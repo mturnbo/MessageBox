@@ -173,8 +173,12 @@ describe('MessageController', () => {
   });
 
   describe('replyToMessage', () => {
+    beforeEach(() => {
+      req.user = { id: 2 };
+    });
+
     it('should create a reply and a new thread for a top-level message', async () => {
-      const parentMessage = { id: 10 };
+      const parentMessage = { id: 10, senderId: 1, recipientId: 2 };
       const replyRecord = {
         id: 11,
         senderId: 2,
@@ -232,7 +236,7 @@ describe('MessageController', () => {
     });
 
     it('should attach a reply to an existing thread', async () => {
-      const parentMessage = { id: 14 };
+      const parentMessage = { id: 14, senderId: 2, recipientId: 1 };
       const existingThread = { id: 30, originMsg: 10 };
       const replyRecord = {
         id: 15,
@@ -286,6 +290,47 @@ describe('MessageController', () => {
 
       expect(res.status).toHaveBeenCalledWith(404);
       expect(res.json).toHaveBeenCalledWith({ error: { message: 'Message not found' } });
+    });
+
+    it('should return 404 and create nothing when the user is not a party to the parent message', async () => {
+      req.body = { replyToId: 10, senderId: 2, recipientId: 2, body: 'let me in' };
+      req.get = jest.fn().mockReturnValue('reply-key-5');
+
+      sandbox.stub(sequelize, 'transaction').callsFake(async (callback) => callback({}));
+      sandbox.stub(Message, 'findByPk').resolves({ id: 10, senderId: 1, recipientId: 3 });
+      const messageCreate = sandbox.stub(Message, 'create');
+      const threadCreate = sandbox.stub(Thread, 'create');
+      const threadMessageCreate = sandbox.stub(ThreadMessage, 'create');
+
+      await MessageController.replyToMessage(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith({ error: { message: 'Message not found' } });
+      expect(messageCreate.called).toBe(false);
+      expect(threadCreate.called).toBe(false);
+      expect(threadMessageCreate.called).toBe(false);
+    });
+
+    it('should allow replying to a self-addressed message', async () => {
+      const replyRecord = {
+        id: 12,
+        toJSON: jest.fn().mockReturnValue({ id: 12, clientMessageId: 'reply-key-6', body: 'note to self' })
+      };
+
+      req.body = { replyToId: 10, senderId: 2, recipientId: 2, body: 'note to self' };
+      req.get = jest.fn().mockReturnValue('reply-key-6');
+
+      sandbox.stub(sequelize, 'transaction').callsFake(async (callback) => callback({}));
+      sandbox.stub(Message, 'findByPk').resolves({ id: 10, senderId: 2, recipientId: 2 });
+      sandbox.stub(Thread, 'findOne').resolves(null);
+      sandbox.stub(ThreadMessage, 'findOne').resolves(null);
+      sandbox.stub(Thread, 'create').resolves({ id: 40 });
+      sandbox.stub(Message, 'create').resolves(replyRecord);
+      sandbox.stub(ThreadMessage, 'create').resolves({});
+
+      await MessageController.replyToMessage(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(201);
     });
 
     it('should replay the original reply for a duplicate idempotency key', async () => {
