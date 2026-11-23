@@ -211,7 +211,10 @@ const MessageController = {
       const result = await sequelize.transaction(async (transaction) => {
         const parentMessage = await Message.findByPk(replyToId, { transaction });
 
-        if (!parentMessage) {
+        // 404 rather than 403 so non-participants can't probe which message ids exist
+        const isParticipant = parentMessage
+          && (req.user.id === parentMessage.senderId || req.user.id === parentMessage.recipientId);
+        if (!isParticipant) {
           return { status: 404, payload: { error: { message: 'Message not found' } } };
         }
 
