@@ -100,6 +100,16 @@ const getReplyMetadata = async (messageId) => {
   };
 };
 
+// Only these client fields reach Message.create; ids, timestamps and read/delete state stay server-controlled
+const buildMessageFields = (body, clientMessageId) => ({
+  senderId: body.senderId,
+  recipientId: body.recipientId,
+  subject: body.subject,
+  body: body.body,
+  senderAddress: body.senderAddress,
+  clientMessageId,
+});
+
 const isSameMessageRequest = (message, payload, replyTo = null) => (
   message.senderId === payload.senderId
   && message.recipientId === payload.recipientId
@@ -165,13 +175,8 @@ const MessageController = {
 
   createMessage: async (req, res) => {
     const clientMessageId = resolveClientMessageId(req, req.body);
-    const messagePayload = {
-      ...req.body,
-      clientMessageId,
-    };
-
     try {
-      const newMessage = await Message.create(messagePayload);
+      const newMessage = await Message.create(buildMessageFields(req.body, clientMessageId));
       return res.status(201).json(buildMessageResponse(newMessage, null, null, false));
     } catch (error) {
       if (!isClientMessageIdConflict(error)) {
@@ -223,11 +228,10 @@ const MessageController = {
           thread = await Thread.create({ originMsg: replyToId }, { transaction });
         }
 
-        const replyPayload = { ...req.body };
-        delete replyPayload.replyToId;
-        replyPayload.clientMessageId = clientMessageId;
-
-        const replyMessage = await Message.create(replyPayload, { transaction });
+        const replyMessage = await Message.create(
+          buildMessageFields(req.body, clientMessageId),
+          { transaction }
+        );
 
         await ThreadMessage.create(
           {
