@@ -8,6 +8,9 @@ const REQUIRED = [
   'JWT_SECRET', 'JWT_EXPIRATION_TIME',
 ];
 
+// Same minimum as the Python API
+export const MIN_SIGNING_KEY_LENGTH = 32;
+
 export const JWT_SECRET = process.env.JWT_SECRET;
 export const JWT_ISSUER = process.env.JWT_ISSUER || 'messagebox-api-node';
 export const JWT_AUDIENCE = process.env.JWT_AUDIENCE || 'messagebox';
@@ -19,8 +22,12 @@ export function validateEnv() {
       .filter(v => !process.env[v])
       .forEach(v => missing.push(v));
   }
-  if (missing.length) {
-    missing.forEach(v => logger.error(`[CONFIG] Missing required env var: ${v}`));
+  const errors = missing.map(v => `[CONFIG] Missing required env var: ${v}`);
+  if (process.env.JWT_SECRET && process.env.JWT_SECRET.length < MIN_SIGNING_KEY_LENGTH) {
+    errors.push(`[CONFIG] JWT_SECRET must be at least ${MIN_SIGNING_KEY_LENGTH} characters`);
+  }
+  if (errors.length) {
+    errors.forEach(message => logger.error(message));
     logger.flush(() => process.exit(1));
   }
 }
