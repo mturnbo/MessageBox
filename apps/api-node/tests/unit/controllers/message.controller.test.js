@@ -61,6 +61,36 @@ describe('MessageController', () => {
       });
     });
 
+    it('should only pass allow-listed fields to Message.create', async () => {
+      req.body = {
+        senderId: 1,
+        recipientId: 2,
+        subject: 'Hello',
+        body: 'Test body',
+        senderAddress: '10.0.0.1',
+        id: 999,
+        sentAt: '2020-01-01T00:00:00Z',
+        readAt: '2020-01-01T00:00:00Z',
+        readerAddress: '10.0.0.2',
+        deletedBySender: '2020-01-01T00:00:00Z',
+        deletedByRecipient: '2020-01-01T00:00:00Z'
+      };
+      req.get = jest.fn().mockReturnValue('message-key-5');
+      const messageCreate = sandbox.stub(Message, 'create').resolves({ toJSON: () => ({ id: 1 }) });
+
+      await MessageController.createMessage(req, res);
+
+      sandbox.assert.calledOnceWithExactly(messageCreate, {
+        senderId: 1,
+        recipientId: 2,
+        subject: 'Hello',
+        body: 'Test body',
+        senderAddress: '10.0.0.1',
+        clientMessageId: 'message-key-5'
+      });
+      expect(res.status).toHaveBeenCalledWith(201);
+    });
+
     it('should handle errors when creating message fails', async () => {
       req.body = {
         senderId: 1,
@@ -290,6 +320,45 @@ describe('MessageController', () => {
 
       expect(res.status).toHaveBeenCalledWith(404);
       expect(res.json).toHaveBeenCalledWith({ error: { message: 'Message not found' } });
+    });
+
+    it('should only pass allow-listed fields to Message.create for a reply', async () => {
+      req.body = {
+        replyToId: 10,
+        senderId: 2,
+        recipientId: 1,
+        subject: 'Re: hello',
+        body: 'reply body',
+        id: 999,
+        sentAt: '2020-01-01T00:00:00Z',
+        readAt: '2020-01-01T00:00:00Z',
+        deletedByRecipient: '2020-01-01T00:00:00Z'
+      };
+      req.get = jest.fn().mockReturnValue('reply-key-7');
+
+      sandbox.stub(sequelize, 'transaction').callsFake(async (callback) => callback({}));
+      sandbox.stub(Message, 'findByPk').resolves({ id: 10, senderId: 1, recipientId: 2 });
+      sandbox.stub(Thread, 'findOne').resolves(null);
+      sandbox.stub(ThreadMessage, 'findOne').resolves(null);
+      sandbox.stub(Thread, 'create').resolves({ id: 22 });
+      const messageCreate = sandbox.stub(Message, 'create').resolves({ id: 11, toJSON: () => ({ id: 11 }) });
+      sandbox.stub(ThreadMessage, 'create').resolves({});
+
+      await MessageController.replyToMessage(req, res);
+
+      sandbox.assert.calledOnceWithExactly(
+        messageCreate,
+        {
+          senderId: 2,
+          recipientId: 1,
+          subject: 'Re: hello',
+          body: 'reply body',
+          senderAddress: undefined,
+          clientMessageId: 'reply-key-7'
+        },
+        { transaction: {} }
+      );
+      expect(res.status).toHaveBeenCalledWith(201);
     });
 
     it('should return 404 and create nothing when the user is not a party to the parent message', async () => {
