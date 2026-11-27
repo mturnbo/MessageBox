@@ -4,6 +4,7 @@ import AuthenticationController from '#controllers/auth.controller';
 import User from '#models/user.model';
 import { Op } from 'sequelize';
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcrypt';
 
 describe('AuthenticationController', () => {
   let req, res, sandbox;
@@ -79,11 +80,49 @@ describe('AuthenticationController', () => {
       );
     });
 
-    it('should throw BadRequestError when user not found', async () => {
+    it('should throw 401 for an unknown user, the same as a wrong password', async () => {
       req.body = { username: 'nobody', password: 'pass' };
       sandbox.stub(User, 'findOne').resolves(null);
 
+      await expect(AuthenticationController.authenticateUser(req, res))
+        .rejects.toMatchObject({ statusCode: 401, message: 'Invalid credentials' });
+      expect(res.json).not.toHaveBeenCalled();
+    });
+
+    it('should run a cost-12 bcrypt compare for an unknown user to equalize timing', async () => {
+      req.body = { username: 'nobody', password: 'pass' };
+      sandbox.stub(User, 'findOne').resolves(null);
+      const compare = sandbox.spy(bcrypt, 'compare');
+
       await expect(AuthenticationController.authenticateUser(req, res)).rejects.toThrow();
+
+      sandbox.assert.calledOnce(compare);
+      const [password, hash] = compare.firstCall.args;
+      expect(password).toBe('pass');
+      expect(bcrypt.getRounds(hash)).toBe(12);
+    });
+
+    it.each([
+      ['username is missing', { password: 'secret' }],
+      ['password is missing', { username: 'alice' }],
+      ['username is empty', { username: '', password: 'secret' }],
+      ['password is empty', { username: 'alice', password: '' }],
+      ['username is not a string', { username: { $gt: '' }, password: 'secret' }],
+      ['password is not a string', { username: 'alice', password: 12345678 }],
+    ])('should throw 400 without querying the database when %s', async (_, body) => {
+      req.body = body;
+      const findOne = sandbox.stub(User, 'findOne');
+
+      await expect(AuthenticationController.authenticateUser(req, res))
+        .rejects.toMatchObject({ statusCode: 400, message: 'username and password are required' });
+      expect(findOne.called).toBe(false);
+    });
+
+    it('should throw 400 when the body is missing', async () => {
+      req.body = undefined;
+
+      await expect(AuthenticationController.authenticateUser(req, res))
+        .rejects.toMatchObject({ statusCode: 400 });
     });
 
     it('should throw UnauthorizedError when password is wrong', async () => {
@@ -98,7 +137,9 @@ describe('AuthenticationController', () => {
       req.body = { username: 'alice', password: 'wrong' };
       sandbox.stub(User, 'findOne').resolves(mockUser);
 
-      await expect(AuthenticationController.authenticateUser(req, res)).rejects.toThrow();
+      await expect(AuthenticationController.authenticateUser(req, res))
+        .rejects.toMatchObject({ statusCode: 401, message: 'Invalid credentials' });
+      expect(mockUser.save).not.toHaveBeenCalled();
     });
   });
 });
