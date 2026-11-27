@@ -9,6 +9,8 @@ const REQUIRED = [
 ];
 
 export const JWT_SECRET = process.env.JWT_SECRET;
+export const JWT_ISSUER = process.env.JWT_ISSUER || 'messagebox-api-node';
+export const JWT_AUDIENCE = process.env.JWT_AUDIENCE || 'messagebox';
 
 export function validateEnv() {
   const missing = REQUIRED.filter(v => !process.env[v]);
