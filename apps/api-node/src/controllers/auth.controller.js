@@ -1,9 +1,8 @@
 // Authentication Controller
 import User from '#models/user.model.js';
-import jwt from "jsonwebtoken";
 import { Op } from 'sequelize';
-import { JWT_SECRET } from "#config/validateEnv.js";
 import { BadRequestError, UnauthorizedError } from "#utils/ApiErrors.js";
+import { signAccessToken, signRefreshToken } from "#utils/token.js";
 
 const AuthenticationController = {
 
@@ -19,17 +18,8 @@ const AuthenticationController = {
     user.lastLogin = new Date().toISOString().replace(/T/, ' ').replace(/\..+/g, '')
     await user.save();
 
-    const token = jwt.sign(
-      { username: user.username },
-      JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRATION_TIME }
-    );
-
-    const refreshToken = jwt.sign(
-      { username: user.username, type: 'refresh' },
-      JWT_SECRET,
-      { expiresIn: process.env.JWT_REFRESH_EXPIRATION_TIME ?? '7d' }
-    );
+    const token = signAccessToken(user);
+    const refreshToken = signRefreshToken(user);
 
     res.json({ username: user.username, token, refreshToken });
   }

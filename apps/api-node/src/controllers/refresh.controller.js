@@ -1,24 +1,18 @@
-import jwt from 'jsonwebtoken';
-import { JWT_SECRET } from '#config/validateEnv.js';
 import { BadRequestError, UnauthorizedError } from '#utils/ApiErrors.js';
+import { findTokenUser, signAccessToken, verifyToken } from '#utils/token.js';
 
 const RefreshController = {
-  refreshToken: (req, res, next) => {
+  refreshToken: async (req, res, next) => {
     const { refreshToken } = req.body;
     if (!refreshToken) throw new BadRequestError();
-    try {
-      const payload = jwt.verify(refreshToken, JWT_SECRET);
-      if (payload.type !== 'refresh') throw new UnauthorizedError();
-      const token = jwt.sign(
-        { username: payload.username },
-        JWT_SECRET,
-        { expiresIn: process.env.JWT_EXPIRATION_TIME }
-      );
-      res.json({ token });
-    } catch (err) {
-      if (err instanceof UnauthorizedError) throw err;
-      throw new UnauthorizedError();
-    }
+
+    const payload = verifyToken(refreshToken);
+    if (!payload || payload.type !== 'refresh') throw new UnauthorizedError();
+
+    const user = await findTokenUser(payload);
+    if (!user) throw new UnauthorizedError();
+
+    res.json({ token: signAccessToken(user) });
   }
 };
 

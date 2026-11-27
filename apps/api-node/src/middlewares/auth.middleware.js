@@ -1,8 +1,7 @@
-import jwt from "jsonwebtoken";
-import { JWT_SECRET } from "#config/validateEnv.js";
 import { sendError } from "#utils/errorResponse.js";
+import { findTokenUser, verifyToken } from "#utils/token.js";
 
-export const authMiddleware = (req, res, next) => {
+export const authMiddleware = async (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
@@ -10,11 +9,19 @@ export const authMiddleware = (req, res, next) => {
         return sendError(res, 401, 'Access token required');
     }
 
-    jwt.verify(token, JWT_SECRET, (err, user) => {
-        if (err || user.type === 'refresh') {
-            return sendError(res, 401, 'Invalid or expired token');
+    const payload = verifyToken(token);
+    if (!payload || payload.type === 'refresh') {
+        return sendError(res, 401, 'Invalid or expired token');
+    }
+
+    try {
+        const user = await findTokenUser(payload);
+        if (!user) {
+            return sendError(res, 401, 'Authenticated user not found');
         }
-        req.user = user;
+        req.user = { id: user.id, username: user.username };
         next();
-    });
+    } catch (err) {
+        next(err);
+    }
 };

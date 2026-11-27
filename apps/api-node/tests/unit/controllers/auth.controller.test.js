@@ -3,6 +3,7 @@ import sinon from 'sinon';
 import AuthenticationController from '#controllers/auth.controller';
 import User from '#models/user.model';
 import { Op } from 'sequelize';
+import jwt from 'jsonwebtoken';
 
 describe('AuthenticationController', () => {
   let req, res, sandbox;
@@ -32,7 +33,9 @@ describe('AuthenticationController', () => {
 
     it('should authenticate and return token when username matches', async () => {
       const mockUser = {
+        id: 5,
         username: 'alice',
+        passwordHash: '$2b$12$alicehash',
         lastLogin: null,
         save: jest.fn().mockResolvedValue(undefined),
         checkPassword: jest.fn().mockResolvedValue(true)
@@ -46,11 +49,21 @@ describe('AuthenticationController', () => {
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({ username: 'alice', token: expect.any(String), refreshToken: expect.any(String) })
       );
+      const { token, refreshToken } = res.json.mock.calls[0][0];
+      const access = jwt.decode(token);
+      const refresh = jwt.decode(refreshToken);
+      expect(access).toMatchObject({ sub: '5', iss: 'messagebox-api-node', aud: 'messagebox' });
+      expect(access.pwd_fp).toMatch(/^[0-9a-f]{16}$/);
+      expect(access.username).toBeUndefined();
+      expect(access.type).toBeUndefined();
+      expect(refresh).toMatchObject({ sub: '5', pwd_fp: access.pwd_fp, type: 'refresh' });
     });
 
     it('should authenticate and return token when email matches', async () => {
       const mockUser = {
+        id: 5,
         username: 'alice',
+        passwordHash: '$2b$12$alicehash',
         lastLogin: null,
         save: jest.fn().mockResolvedValue(undefined),
         checkPassword: jest.fn().mockResolvedValue(true)
@@ -75,7 +88,9 @@ describe('AuthenticationController', () => {
 
     it('should throw UnauthorizedError when password is wrong', async () => {
       const mockUser = {
+        id: 5,
         username: 'alice',
+        passwordHash: '$2b$12$alicehash',
         lastLogin: null,
         save: jest.fn().mockResolvedValue(undefined),
         checkPassword: jest.fn().mockResolvedValue(false)

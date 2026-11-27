@@ -56,7 +56,7 @@ All routes except `POST /v1/auth` and `GET /v1/health` require a JWT Bearer toke
 Authorization: Bearer <token>
 ```
 
-Obtain a token via `POST /v1/auth`. The token payload contains `{ username }`.
+Obtain a token via `POST /v1/auth`. The token payload contains `{ sub, pwd_fp }`, the same claims as the Python API: `sub` is the user id and `pwd_fp` is a fingerprint of the password hash. Tokens are signed with `iss` (`JWT_ISSUER`, default `messagebox-api-node`) and `aud` (`JWT_AUDIENCE`, default `messagebox`), and both are checked on every request. Changing the password or deleting the account invalidates existing access and refresh tokens.
 
 ---
 
@@ -103,7 +103,7 @@ Get users with explicit pagination.
 
 Get a single user by numeric ID, username, or email address.
 
-**Response `200`:** user object  
+**Response `200`:** user object
 **Response `404`:** user not found
 
 #### `POST /v1/users/register`
@@ -181,7 +181,7 @@ Get messages sent by a user.
 
 Get a single message by ID.
 
-**Response `200`:** message object  
+**Response `200`:** message object
 **Response `404`:** message not found
 
 #### `GET /v1/messages/:id/thread`
@@ -216,8 +216,8 @@ Create a new message. Supports idempotency via `clientMessageId` or the `Idempot
 
 `subject`, `body`, `senderAddress`, and `clientMessageId` are optional.
 
-**Response `201`:** [Message post response](#message-post-response)  
-**Response `200`:** same message returned when request is an idempotency replay  
+**Response `201`:** [Message post response](#message-post-response)
+**Response `200`:** same message returned when request is an idempotency replay
 **Response `409`:** same `clientMessageId` used with different payload
 
 #### `POST /v1/messages/reply`
